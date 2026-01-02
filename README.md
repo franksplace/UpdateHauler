@@ -381,6 +381,53 @@ jobs:
 - ✅ **Validation**: Confirms your configuration is correct
 - ✅ **Safe**: Perfect for testing on PRs before merging
 
+## GitHub Actions Workflows
+
+This repository uses GitHub Actions for automated CI/CD:
+
+### PR Validation Workflow (`.github/workflows/pr-validation.yml`)
+
+Triggered on: Pull request events (opened, synchronize, reopened, edited)
+
+**Features:**
+- **Title Validation**: Checks PR titles follow conventional commit format
+  - Supports: feat, fix, docs, style, refactor, test, chore, build, ci, perf, revert
+  - Warns if format doesn't match
+- **Body Validation**: Ensures PR has a description
+  - Checks for change descriptions (added, removed, fixed, updated)
+- **PR Size Analysis**: Calculates and labels PR by size
+  - XS: < 100 lines
+  - S: 100-499 lines
+  - M: 500-999 lines
+  - L: 1000-1999 lines
+  - XL: 2000+ lines
+- **Automatic Labeling**: Adds labels based on title and size
+  - Type labels: type/feature, type/bug, type/documentation, etc.
+  - Size labels: size/XS, size/S, size/M, size/L, size/XL
+- **First-Time Contributors**: Welcomes new contributors with helpful resources
+- **Dependabot Auto-Merge**: Automatically merges Dependabot PRs if checks pass
+- **Large PR Notifications**: Comments on XL PRs requesting review and careful consideration
+
+### PR Check Workflow (`.github/workflows/pr.yml`)
+
+Triggered on: Pull requests to `main` or `develop`
+
+**Features:**
+- **Build (Debug & Release)**: Compiles on Ubuntu and macOS
+- **Clippy**: Lint checks with warnings as errors
+- **Rustfmt**: Code formatting checks
+- **Test**: Runs full test suite on both platforms
+- **Caching**: Optimizes build times with cargo caching
+
+### Release Build Workflow (`.github/workflows/release.yml`)
+
+Triggered on: Push to `main` branch
+
+**Features:**
+- All checks from PR workflow (Build, Clippy, Rustfmt, Test)
+- **Release Test Suite**: Runs `./test_release.sh` for end-to-end testing
+- Validates on both Ubuntu and macOS
+
 ## Building from Source
 
 ```bash
