@@ -226,10 +226,14 @@ print_section "16. Testing Schedule Time Flags"
 
 # Test custom schedule time flags (just verify they don't error)
 ./target/release/updatehauler --sched-hour "3" --sched-minute "30" schedule check >/tmp/schedule_flags.txt 2>&1
-if grep -q "LaunchAgent plist" /tmp/schedule_flags.txt; then
+# Check for platform-specific success indicators
+# macOS: "LaunchAgent plist", "plist exists", "launchctl status"
+# Linux: "crontab at all enabled", "No crontab", or "crontab:" (showing crontab content)
+if grep -q "LaunchAgent plist\|LaunchAgent plist:\|launchctl status:\|crontab at all\|No crontab\|crontab:" /tmp/schedule_flags.txt; then
 	print_result "Schedule time flags"
 else
 	echo "Error: Schedule time flags failed"
+	cat /tmp/schedule_flags.txt
 	exit 1
 fi
 

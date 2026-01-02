@@ -208,10 +208,21 @@ jobs:
           echo "Testing dry-run with custom schedule..."
           ./target/release/updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check
 
-          if ./target/release/updatehauler --dry-run schedule check 2>&1 | grep -q "LaunchAgent plist"; then
+          # Check for platform-specific schedule output
+          SCHEDULE_OUTPUT=$(./target/release/updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check 2>&1)
+
+          # macOS checks for LaunchAgent plist, Linux checks for crontab info
+          if echo "$SCHEDULE_OUTPUT" | grep -q "LaunchAgent plist\|LaunchAgent plist:\|crontab at all"; then
             echo "✓ Dry-run schedule check works"
           else
             echo "::error::Dry-run schedule check failed"
+            echo "Output: $SCHEDULE_OUTPUT"
+            exit 1
+          fi
+
+          # Verify dry-run mode is active
+          if ! echo "$SCHEDULE_OUTPUT" | grep -q "DRY-RUN"; then
+            echo "::error::Dry-run mode not active in schedule check"
             exit 1
           fi
 
