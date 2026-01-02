@@ -71,10 +71,14 @@ mod tests {
 
     #[test]
     fn test_os_update_with_no_pkg_mgr() {
-        let config = Config::new("/tmp/test");
-        let mut insights = Insights::new().expect("Failed to create Insights");
+        let mut config = Config::new("/tmp/test");
+        let insights = Insights::new().expect("Failed to create Insights");
+
+        // Use dry-run mode to avoid actual updates in tests
+        config.dry_run = true;
 
         // Simulate no package manager
+        let mut insights = insights;
         if insights.is_linux {
             insights.pkg_mgr = None;
         }

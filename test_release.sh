@@ -185,7 +185,7 @@ print_result "--cargo-save-file option in help"
 
 print_section "13. Testing Multiple Actions"
 
-./target/release/updatehauler os trim-logfile >/tmp/multiple_actions.txt 2>&1
+./target/release/updatehauler --dry-run os trim-logfile >/tmp/multiple_actions.txt 2>&1
 if grep -q "Main → Start" /tmp/multiple_actions.txt &&
 	grep -q "Main → End" /tmp/multiple_actions.txt; then
 	print_result "Multiple actions execution"
@@ -247,8 +247,8 @@ print_result "Restore commands (no crash)"
 print_section "18. Testing Package Detection"
 
 # Test that binary correctly detects OS and package managers
-./target/release/updatehauler --run "echo test" >/tmp/detection.txt 2>&1
-if grep -q "test" /tmp/detection.txt; then
+./target/release/updatehauler --dry-run os >/tmp/detection.txt 2>&1
+if grep -q "Would execute:" /tmp/detection.txt; then
 	print_result "OS and package manager detection"
 else
 	echo "Error: OS detection failed"
@@ -268,7 +268,20 @@ else
 	exit 1
 fi
 
-print_section "20. Cleaning Up Test Files"
+print_section "20. Testing Dry-Run Mode"
+
+# Test dry-run doesn't actually update anything
+./target/release/updatehauler --dry-run os >/tmp/dryrun_output.txt 2>&1
+if grep -q "DRY-RUN" /tmp/dryrun_output.txt &&
+	grep -q "Would execute:" /tmp/dryrun_output.txt &&
+	! grep -q "Password" /tmp/dryrun_output.txt; then
+	print_result "Dry-run mode (no password prompts)"
+else
+	echo "Error: Dry-run mode failed"
+	exit 1
+fi
+
+print_section "21. Cleaning Up Test Files"
 
 rm -f /tmp/help_output.txt /tmp/version_output.txt
 rm -f /tmp/run_output.txt /tmp/stream_output.txt
@@ -279,6 +292,7 @@ rm -f /tmp/installdir.txt /tmp/multiple_actions.txt
 rm -f /tmp/debug_output.txt
 rm -f /tmp/schedule_check.txt /tmp/schedule_flags.txt
 rm -f /tmp/detection.txt /tmp/test_trim.log
+rm -f /tmp/dryrun_output.txt
 
 print_result "Cleanup"
 

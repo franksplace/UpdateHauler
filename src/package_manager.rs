@@ -35,11 +35,23 @@ impl<'a> PackageManager<'a> {
             command
         };
 
+        if self.config.dry_run {
+            if self.config.show_header {
+                self.logger.log(&format!("{} → Start (DRY-RUN)", cmd_str));
+            }
+            self.logger.log(&format!("Would execute: {}", cmd_str));
+            if self.config.show_header {
+                self.logger
+                    .log(&format!("{} → Return code 0 (DRY-RUN)", cmd_str));
+            }
+            return Ok(());
+        }
+
         if self.config.show_header {
             self.logger.log(&format!("{} → Start", cmd_str));
         }
 
-        // Spawn the process
+        // Spawn process
         let mut child = Command::new(command)
             .args(args)
             .stdout(Stdio::piped())
@@ -242,7 +254,15 @@ impl<'a> PackageManager<'a> {
 
     pub fn os_update(&mut self) -> Result<()> {
         if self.insights.is_darwin {
-            self.run_cmd(true, "softwareupdate", &["-a", "-i", "--verbose"])?;
+            // On macOS, try softwareupdate with sudo for authentication in CI environments
+            // If that fails, try without sudo for regular user environments
+            let softwareupdate_result =
+                self.run_cmd(false, "sudo", &["softwareupdate", "-a", "-i", "--verbose"]);
+
+            if softwareupdate_result.is_err() {
+                // If sudo fails, try without sudo
+                self.run_cmd(true, "softwareupdate", &["-a", "-i", "--verbose"])?;
+            }
 
             self.run_cmd(true, "mas", &["update"])?;
 

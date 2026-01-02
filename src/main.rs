@@ -101,6 +101,12 @@ struct Args {
 
     #[arg(
         long,
+        help = "Dry-run mode - show what would be done without making changes"
+    )]
+    dry_run: bool,
+
+    #[arg(
+        long,
         value_name = "FILE",
         help = "Logfile to use (default: ~/.local/updates.log)"
     )]
@@ -182,6 +188,7 @@ fn main() -> Result<ExitCode> {
     if args.logfile_only {
         config.use_log = true;
     }
+    config.dry_run = args.dry_run;
     if let Some(logfile) = args.logfile {
         config.log = PathBuf::from(logfile);
     }

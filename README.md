@@ -12,6 +12,9 @@ UpdateHauler is a command-line caretaker for your entire development stack that 
 
 **OS Package Managers:**
 - **macOS** - System updates via `softwareupdate` and Mac App Store updates via `mas`
+  - Uses `sudo softwareupdate` first (for CI/CD environments)
+  - Falls back to regular `softwareupdate` if sudo fails
+  - Requires password unless using dry-run mode
 - **Debian/Ubuntu** - Updates via `apt-get`
 - **Red Hat/CentOS/Fedora/Rocky Linux/Oracle Linux** - Updates via `dnf`
 - **Alpine Linux** - Updates via `apk`
@@ -23,6 +26,7 @@ UpdateHauler is a command-line caretaker for your entire development stack that 
 - **Automated Updates** - Update OS packages, Homebrew, and Cargo in a single command
 - **Backup & Restore** - Save and restore package configurations for brew and cargo
 - **Scheduling** - Set up automated updates via cron (Linux) or launchd (macOS)
+- **Dry-Run Mode** - Preview changes without actually executing (perfect for CI/CD and testing)
 - **Logging** - Comprehensive logging with optional rotation
 - **Color Output** - Readable color-coded terminal output
 - **Self-Installation** - Easy installation and updates of application itself
@@ -46,6 +50,7 @@ updatehauler [OPTIONS] [ACTION]...
 | `--color` | Enable color output (default) |
 | `--no-color` | Disable color output |
 | `--logfile-only` | Output only to logfile (no stdout) |
+| `--dry-run` | Preview what would be done without making changes (no password prompts, perfect for CI/CD) |
 | `--logfile <FILE>` | Specify custom logfile location (default: `~/.local/updates.log`) |
 | `--max-log-lines <N>` | Set maximum logfile lines for rotation (default: 10000) |
 | `--installdir <PATH>` | Set installation directory (default: `~/.local/bin`) |
@@ -143,6 +148,19 @@ updatehauler --cargo-save-file "/custom/path/cargo-backup.json" cargo-save
 updatehauler --debug
 ```
 
+### Dry-run mode - preview changes
+```bash
+# See what would be updated without actually updating
+updatehauler --dry-run
+
+# Dry-run specific actions
+updatehauler --dry-run os
+updatehauler --dry-run brew cargo
+
+# Dry-run with custom schedule time
+updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule enable
+```
+
 ### Schedule daily updates at 2 AM
 ```bash
 updatehauler schedule enable
@@ -179,6 +197,15 @@ updatehauler install
 ### Run arbitrary command with logging
 ```bash
 updatehauler --run echo "Hello World"
+```
+
+### Dry-run mode
+```bash
+# See what would be updated without actually updating
+updatehauler --dry-run
+
+# Dry-run specific actions
+updatehauler --dry-run os brew
 ```
 
 ## Dependencies
@@ -225,6 +252,7 @@ Default schedule (can be modified with command-line flags):
 - Default: 2:00 AM daily
 - Requires sudo privileges for `pmset` command
 - Automatically wakes system to run updates via LaunchAgent
+- **OS Updates**: Tries `sudo softwareupdate` first (for CI/CD environments), falls back to regular `softwareupdate` if sudo fails
 
 #### Linux Scheduling Details
 - Adds cron entry to user's crontab
@@ -232,11 +260,52 @@ Default schedule (can be modified with command-line flags):
 - Default: 2:00 AM daily (`0 2 * * *`)
 - System must be awake at scheduled time
 
+## Dry-Run Mode
+
+UpdateHauler supports a `--dry-run` mode that previews what would happen without actually making changes. This is particularly useful for:
+
+- **CI/CD Pipelines**: Test automation without triggering system updates or requiring authentication
+- **Configuration Validation**: Verify your schedule and options work before enabling
+- **Debugging**: See exactly which commands will be executed
+- **Safety Audits**: Review update plans before running them
+
+### How Dry-Run Works
+
+When you use `--dry-run`:
+- Commands are printed with `(DRY-RUN)` prefix
+- Shows "Would execute: {command}" for each action
+- Returns immediately without executing anything
+- **No password prompts** - perfect for automated testing
+- No network calls to package repositories
+- No system state changes
+- No actual package installations or updates
+
+### Dry-Run Examples
+
+```bash
+# Preview all default updates
+updatehauler --dry-run
+
+# Preview OS updates only
+updatehauler --dry-run os
+
+# Preview scheduled task setup
+updatehauler --dry-run schedule enable
+
+# Preview with custom schedule time
+updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check
+
+# Preview brew and cargo updates
+updatehauler --dry-run brew brew-save cargo cargo-save
+```
+
 ## What UpdateHauler Does
 
 - ✅ Updates system packages across multiple operating systems
 - ✅ Manages package backups and restores
 - ✅ Automates updates via scheduling
+- ✅ Provides dry-run mode for safe preview and CI/CD testing
+- ✅ Supports sudo fallback for macOS softwareupdate in CI environments
 - ✅ Provides comprehensive logging
 - ✅ Supports color-coded output
 - ✅ Self-updates via install/update commands
@@ -265,7 +334,54 @@ Default schedule (can be modified with command-line flags):
 cargo install updatehauler
 ```
 
-### Building from Source
+### CI/CD Integration
+
+UpdateHauler is designed to work well in CI/CD pipelines:
+
+### Using Dry-Run for Testing
+
+```bash
+# In your CI pipeline, use dry-run to test configuration
+- name: Test updatehauler configuration
+  run: ./updatehauler --dry-run schedule check
+
+# Validate what would be updated
+- name: Preview updates
+  run: ./updatehauler --dry-run
+
+# Test specific actions
+- name: Test backup commands
+  run: ./updatehauler --dry-run brew-save cargo-save
+```
+
+### GitHub Actions Example
+
+```yaml
+name: Test Update Configuration
+on: [pull_request]
+
+jobs:
+  test-config:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: cargo install --path .
+      - name: Test schedule configuration
+        run: updatehauler --dry-run schedule check
+      - name: Preview updates
+        run: updatehauler --dry-run os brew
+```
+
+### Benefits in CI/CD
+
+- ✅ **No Password Prompts**: Dry-run mode doesn't require sudo password
+- ✅ **No Side Effects**: Won't install packages or modify system state
+- ✅ **Fast Execution**: No network calls to package repositories
+- ✅ **Validation**: Confirms your configuration is correct
+- ✅ **Safe**: Perfect for testing on PRs before merging
+
+## Building from Source
 
 ```bash
 # Clone the repository
