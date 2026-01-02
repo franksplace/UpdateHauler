@@ -105,9 +105,10 @@ impl<'a> Scheduler<'a> {
         if self.config.dry_run {
             self.logger.log("Would check crontab status (DRY-RUN)");
             if current_tab.is_empty() {
-                self.logger.log("No crontab entries found (DRY-RUN)");
+                self.logger.log("no crontab at all enabled (DRY-RUN)");
             } else {
-                self.logger.log(&format!("Current crontab:\n{} (DRY-RUN)", current_tab));
+                self.logger
+                    .log(&format!("Current crontab:\n{} (DRY-RUN)", current_tab));
             }
             return Ok(());
         }
@@ -270,14 +271,16 @@ impl<'a> Scheduler<'a> {
         let plist_path = PathBuf::from(&plist_path);
 
         if self.config.dry_run {
-            self.logger.log(&format!("LaunchAgent plist: {:?} (DRY-RUN)", plist_path));
+            self.logger
+                .log(&format!("LaunchAgent plist: {:?} (DRY-RUN)", plist_path));
             self.logger.log("Would check plist existence (DRY-RUN)");
             self.logger.log("Would check launchctl status (DRY-RUN)");
             self.logger.log("Would check pmset schedule (DRY-RUN)");
             return Ok(());
         }
 
-        self.logger.log(&format!("LaunchAgent plist: {:?}", plist_path));
+        self.logger
+            .log(&format!("LaunchAgent plist: {:?}", plist_path));
         if plist_path.exists() {
             self.logger.log("  - plist exists");
         } else {
