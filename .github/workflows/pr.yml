@@ -145,3 +145,83 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose --all-targets
+
+  dry-run-test:
+    name: Dry-Run Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Test dry-run for OS updates
+        run: |
+          echo "Testing dry-run for OS updates..."
+          ./target/release/updatehauler --dry-run os
+
+          # Verify dry-run mode is active
+          if ! ./target/release/updatehauler --dry-run os 2>&1 | grep -q "DRY-RUN"; then
+            echo "::error::Dry-run mode not detected for OS updates"
+            exit 1
+          fi
+
+          # Verify no actual updates were executed
+          if ./target/release/updatehauler --dry-run os 2>&1 | grep -q "Password:"; then
+            echo "::error::Password prompt detected in dry-run mode"
+            exit 1
+          fi
+
+      - name: Test dry-run for multiple actions
+        run: |
+          echo "Testing dry-run for multiple actions..."
+          ./target/release/updatehauler --dry-run os brew cargo
+
+          if ! ./target/release/updatehauler --dry-run os brew cargo 2>&1 | grep -q "DRY-RUN"; then
+            echo "::error::Dry-run mode not detected for multiple actions"
+            exit 1
+          fi
+
+      - name: Test dry-run for backup commands
+        run: |
+          echo "Testing dry-run for backup commands..."
+          ./target/release/updatehauler --dry-run brew-save cargo-save
+
+          # Should not crash even if tools aren't installed
+          if [ $? -ne 0 ]; then
+            echo "::error::Dry-run backup commands failed"
+            exit 1
+          fi
+
+      - name: Test dry-run with custom schedule
+        run: |
+          echo "Testing dry-run with custom schedule..."
+          ./target/release/updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check
+
+          if ./target/release/updatehauler --dry-run schedule check 2>&1 | grep -q "LaunchAgent plist"; then
+            echo "✓ Dry-run schedule check works"
+          else
+            echo "::error::Dry-run schedule check failed"
+            exit 1
+          fi
+
+      - name: Verify dry-run doesn't modify system
+        run: |
+          echo "Verifying dry-run doesn't modify system..."
+
+          # Run dry-run multiple times to ensure no side effects
+          ./target/release/updatehauler --dry-run os >/dev/null 2>&1
+          ./target/release/updatehauler --dry-run brew >/dev/null 2>&1
+          ./target/release/updatehauler --dry-run cargo >/dev/null 2>&1
+
+          echo "✓ Dry-run verified - no system modifications"

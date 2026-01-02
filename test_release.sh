@@ -59,7 +59,8 @@ print_section "4. Testing --help"
 ./target/release/updatehauler --help >/tmp/help_output.txt
 if grep -q "Usage:" /tmp/help_output.txt &&
 	grep -q "OPTIONS" /tmp/help_output.txt &&
-	grep -q "ACTION" /tmp/help_output.txt; then
+	grep -q "ACTION" /tmp/help_output.txt &&
+	grep -q "dry-run" /tmp/help_output.txt; then
 	print_result "--help command"
 else
 	echo "Error: --help output missing expected sections"
@@ -278,6 +279,24 @@ if grep -q "DRY-RUN" /tmp/dryrun_output.txt &&
 	print_result "Dry-run mode (no password prompts)"
 else
 	echo "Error: Dry-run mode failed"
+	exit 1
+fi
+
+# Test dry-run shows macOS sudo softwareupdate
+./target/release/updatehauler --dry-run os >/tmp/dryrun_os_output.txt 2>&1
+if grep -q "sudo softwareupdate" /tmp/dryrun_os_output.txt; then
+	print_result "Dry-run shows sudo softwareupdate command"
+else
+	echo "Error: Dry-run doesn't show sudo softwareupdate"
+	exit 1
+fi
+
+# Test dry-run with multiple actions
+./target/release/updatehauler --dry-run os brew >/tmp/dryrun_multi.txt 2>&1
+if grep -q "DRY-RUN" /tmp/dryrun_multi.txt; then
+	print_result "Dry-run with multiple actions"
+else
+	echo "Error: Dry-run with multiple actions failed"
 	exit 1
 fi
 

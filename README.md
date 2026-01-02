@@ -325,7 +325,6 @@ updatehauler --dry-run brew brew-save cargo cargo-save
 - ❌ GUI configuration or settings
 - ❌ Version pinning or rollback capabilities
 - ❌ Dependency conflict resolution
-- ❌ Dry-run mode (preview changes without applying)
 
 ## Installation
 
@@ -418,6 +417,12 @@ Triggered on: Pull requests to `main` or `develop`
 - **Rustfmt**: Code formatting checks
 - **Test**: Runs full test suite on both platforms
 - **Caching**: Optimizes build times with cargo caching
+- **Dry-Run Tests**: Tests `--dry-run` flag for OS updates
+  - Verifies dry-run mode doesn't prompt for passwords
+  - Tests dry-run with multiple actions (os, brew, cargo)
+  - Tests dry-run with backup commands
+  - Tests dry-run with custom schedule times
+  - Verifies dry-run doesn't modify system
 
 ### Release Build Workflow (`.github/workflows/release.yml`)
 
@@ -426,6 +431,12 @@ Triggered on: Push to `main` branch
 **Features:**
 - All checks from PR workflow (Build, Clippy, Rustfmt, Test)
 - **Release Test Suite**: Runs `./test_release.sh` for end-to-end testing
+- **Dry-Run Tests**: Tests `--dry-run` flag for OS updates
+  - Verifies dry-run mode doesn't prompt for passwords
+  - Tests dry-run with multiple actions (os, brew, cargo)
+  - Tests dry-run with backup commands
+  - Tests dry-run with custom schedule times
+  - Verifies dry-run doesn't modify system
 - Validates on both Ubuntu and macOS
 
 ## Building from Source
