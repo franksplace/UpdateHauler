@@ -23,6 +23,7 @@ anyhow = "1.0"
 dirs = "5.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 which = "6.0"
 lazy_static = "1.5"
 duct = "0.13"
@@ -30,6 +31,8 @@ regex = "1.11"
 sys-info = "0.9"
 nix = { version = "0.29", features = ["user"] }
 tempfile = "3.14"
+async-trait = "0.1"
+tokio = { version = "1.40", features = ["full"] }
 
 [profile.release]
 opt-level = 3

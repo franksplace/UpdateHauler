@@ -1,0 +1,58 @@
+# Updatehauler Configuration File
+# Default location: ~/.config/updatehauler/config.yaml
+
+# Enable or disable debug output
+debug: false
+
+# Enable or disable datetime stamps in output
+datetime: true
+
+# Enable or disable header output
+show_header: true
+
+# Enable or disable color output
+color: true
+
+# Enable or disable logging to file
+use_log: false
+
+# Dry-run mode - show what would be done without making changes
+dry_run: false
+
+# Maximum lines for logfile before rotation
+max_log_lines: 10000
+
+# Logfile path (default: ~/.local/updates.log)
+# logfile: ~/.local/updates.log
+
+# Installation directory (default: ~/.local/bin)
+# installdir: ~/.local/bin
+
+# Custom save file locations
+# brew_save_file: ~/.config/brew/Darwin-Brewfile
+# cargo_save_file: ~/.config/cargo/Darwin-arm64-cargo-backup.json
+
+# Schedule configuration for automated updates
+schedule:
+  # Minute (0-59, default: 0)
+  minute: "0"
+  # Hour (0-23, default: 2)
+  hour: "2"
+  # Day of month (1-31, default: *)
+  day_of_month: "*"
+  # Month (1-12, default: *)
+  month: "*"
+  # Day of week (0-7, default: *)
+  # 0 and 7 are Sunday
+  day_of_week: "*"
+
+# Plugin configuration
+plugins:
+  # Enable or disable Homebrew plugin
+  brew: true
+  # Enable or disable Cargo plugin
+  cargo: true
+  # Enable or disable Neovim plugin
+  nvim: false
+  # Enable or disable OS update plugin
+  os: true

@@ -12,6 +12,7 @@ mod config;
 mod insights;
 mod logger;
 mod package_manager;
+mod plugins;
 mod scheduler;
 mod self_install;
 mod utils;
@@ -20,6 +21,9 @@ use config::Config;
 use insights::Insights;
 use logger::Logger;
 use package_manager::PackageManager;
+use plugins::{
+    brew::BrewPlugin, cargo::CargoPlugin, nvim::NvimPlugin, os::OsPlugin, PluginRegistry,
+};
 use scheduler::Scheduler;
 use self_install::SelfInstaller;
 
@@ -35,6 +39,7 @@ ACTIONS:
 Update Actions:
   brew               Update, upgrade, and clean brew formulas and casks
   cargo              Upgrade cargo installed packages (requires cargo-install-update)
+  nvim               Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)
   os                 Update OS & app based packages
 
 Other Actions:
@@ -43,6 +48,9 @@ Other Actions:
 
   cargo-save         Save cargo packages to backup JSON (requires cargo-backup)
   cargo-restore      Restore cargo packages from backup JSON (requires cargo-restore)
+
+  nvim-save          Save nvim plugin configuration (plugins are defined in your config)
+  nvim-restore       Restore nvim plugins
 
   schedule enable    Enable scheduled updates (cron on Linux, launchd on macOS)
   schedule disable   Disable scheduled updates
@@ -55,14 +63,16 @@ Other Actions:
   remove             Remove this script from system
 
 Default Actions (when no actions specified):
-  os, brew, cargo, brew-save, cargo-save, trim-logfile
+  Controlled by YAML config or: os, brew, cargo, brew-save, cargo-save, trim-logfile
 
 Examples:
   updatehauler                       # Run all default actions
   updatehauler os                    # Update OS packages only
   updatehauler brew brew-save        # Update and save brew packages
+  updatehauler nvim                  # Update Neovim plugins
   updatehauler --debug               # Run with debug output
   updatehauler --no-datetime         # Run without timestamps
+  updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
   updatehauler schedule enable       # Enable daily updates at 2 AM
   updatehauler --run "echo hello"    # Run arbitrary command
 "#
@@ -161,6 +171,13 @@ struct Args {
 
     #[arg(
         long,
+        value_name = "FILE",
+        help = "YAML configuration file path (default: ~/.config/updatehauler/config.yaml)"
+    )]
+    config_file: Option<String>,
+
+    #[arg(
+        long,
         value_name = "CMD",
         num_args = 1..,
         allow_hyphen_values = true,
@@ -177,7 +194,8 @@ fn main() -> Result<ExitCode> {
 
     let home = env::var("HOME").context("HOME environment variable not set")?;
 
-    let mut config = Config::new(&home);
+    let config_path: Option<PathBuf> = args.config_file.as_deref().map(PathBuf::from);
+    let mut config = Config::load_from_yaml(&home, config_path.as_ref())?;
 
     if args.debug {
         config.debug = true;
@@ -232,6 +250,14 @@ fn main() -> Result<ExitCode> {
     if let Some(cargo_file) = args.cargo_save_file {
         config.cargo_file = PathBuf::from(cargo_file);
     }
+
+    let mut plugin_registry = PluginRegistry::new();
+    plugin_registry.register(Box::new(BrewPlugin));
+    plugin_registry.register(Box::new(CargoPlugin));
+    plugin_registry.register(Box::new(NvimPlugin));
+    plugin_registry.register(Box::new(OsPlugin));
+
+    let rt = tokio::runtime::Runtime::new()?;
 
     let mut logger = Logger::new(&config);
 
@@ -290,12 +316,17 @@ fn main() -> Result<ExitCode> {
     }
 
     if actions.is_empty() {
-        actions.push("os".to_string());
-        if insights.has_brew {
+        if config.plugins_enabled.os.unwrap_or(true) {
+            actions.push("os".to_string());
+        }
+        if config.plugins_enabled.brew.unwrap_or(false) && insights.has_brew {
             actions.extend_from_slice(&["brew".to_string(), "brew-save".to_string()]);
         }
-        if insights.has_cargo {
+        if config.plugins_enabled.cargo.unwrap_or(false) && insights.has_cargo {
             actions.extend_from_slice(&["cargo".to_string(), "cargo-save".to_string()]);
+        }
+        if config.plugins_enabled.nvim.unwrap_or(false) {
+            actions.push("nvim".to_string());
         }
         actions.push("trim-logfile".to_string());
     }
@@ -305,40 +336,60 @@ fn main() -> Result<ExitCode> {
     for action in &actions {
         match action.as_str() {
             "brew" => {
-                if insights.has_brew {
-                    let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                    pm.brew_update()?;
-                } else {
-                    logger.error("missing dependency — brew (Homebrew) is not installed");
+                if let Some(plugin) = plugin_registry.get_plugin("brew") {
+                    if rt.block_on(plugin.check_available(&config, &insights)) {
+                        rt.block_on(plugin.update(&config, &insights, &mut logger))?;
+                    } else {
+                        logger.error("missing dependency — brew (Homebrew) is not installed");
+                    }
                 }
             }
             "brew-save" => {
-                if insights.has_brew {
-                    let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                    pm.brew_save()?;
-                } else {
-                    logger.error("missing dependency — brew (Homebrew) is not installed");
+                if let Some(plugin) = plugin_registry.get_plugin("brew") {
+                    if rt.block_on(plugin.check_available(&config, &insights)) {
+                        rt.block_on(plugin.save(&config, &insights, &mut logger))?;
+                    } else {
+                        logger.error("missing dependency — brew (Homebrew) is not installed");
+                    }
                 }
             }
             "cargo" => {
-                if insights.has_cargo {
-                    let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                    pm.cargo_update()?;
-                } else {
-                    logger.error("missing dependency — cargo is not installed");
+                if let Some(plugin) = plugin_registry.get_plugin("cargo") {
+                    if rt.block_on(plugin.check_available(&config, &insights)) {
+                        rt.block_on(plugin.update(&config, &insights, &mut logger))?;
+                    } else {
+                        logger.error("missing dependency — cargo is not installed");
+                    }
                 }
             }
             "cargo-save" => {
-                if insights.has_cargo {
-                    let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                    pm.cargo_save()?;
-                } else {
-                    logger.error("missing dependency — cargo is not installed");
+                if let Some(plugin) = plugin_registry.get_plugin("cargo") {
+                    if rt.block_on(plugin.check_available(&config, &insights)) {
+                        rt.block_on(plugin.save(&config, &insights, &mut logger))?;
+                    } else {
+                        logger.error("missing dependency — cargo is not installed");
+                    }
+                }
+            }
+            "nvim" => {
+                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
+                    rt.block_on(plugin.update(&config, &insights, &mut logger))?;
+                }
+            }
+            "nvim-save" => {
+                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
+                    rt.block_on(plugin.save(&config, &insights, &mut logger))?;
+                }
+            }
+            "nvim-restore" => {
+                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
+                    rt.block_on(plugin.restore(&config, &insights, &mut logger))?;
                 }
             }
             "os" => {
-                let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                pm.os_update()?;
+                if let Some(plugin) = plugin_registry.get_plugin("os") {
+                    rt.block_on(plugin.update(&config, &insights, &mut logger))?;
+                }
             }
             "trim-logfile" => {
                 trim_logfile(&config, &mut logger)?;
