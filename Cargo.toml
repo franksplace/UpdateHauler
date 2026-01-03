@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "System package update manager for macOS and Linux"
 authors = ["Frank"]
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/franksplace/updatehauler"
 
 [[bin]]
@@ -33,6 +33,9 @@ nix = { version = "0.29", features = ["user"] }
 tempfile = "3.14"
 async-trait = "0.1"
 tokio = { version = "1.40", features = ["full"] }
+
+[dev-dependencies]
+cargo-tarpaulin = "0.27"
 
 [profile.release]
 opt-level = 3

@@ -578,4 +578,4 @@ The release binary will be located at `target/release/updatehauler`.
 
 ## License
 
-MIT
+Apache-2.0

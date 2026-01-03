@@ -257,15 +257,15 @@ fi
 print_section "18. Testing Backup/Restore Commands"
 
 # Test that backup commands don't crash (may fail if tools not installed)
-./target/release/updatehauler brew-save >/dev/null 2>&1 || true
-./target/release/updatehauler cargo-save >/dev/null 2>&1 || true
-./target/release/updatehauler nvim-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim-save >/dev/null 2>&1 || true
 print_result "Backup commands (no crash)"
 
 # Test that restore commands don't crash (may fail if files not found)
-./target/release/updatehauler brew-restore >/dev/null 2>&1 || true
-./target/release/updatehauler cargo-restore >/dev/null 2>&1 || true
-./target/release/updatehauler nvim-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim-restore >/dev/null 2>&1 || true
 print_result "Restore commands (no crash)"
 
 print_section "19. Testing Package Detection"

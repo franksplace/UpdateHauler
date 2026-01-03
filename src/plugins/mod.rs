@@ -125,7 +125,10 @@ impl<'a> PluginRegistry<'a> {
                 }
             }
         }
-        anyhow::bail!("Invalid action: {}", action_name)
+        anyhow::bail!(
+            "Invalid action: {}. Run 'updatehauler --help' for available actions.",
+            action_name
+        )
     }
 
     #[allow(dead_code)]
