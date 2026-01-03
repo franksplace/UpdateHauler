@@ -19,7 +19,7 @@ If you discover a security vulnerability in UpdateHauler, please report it to us
 
 For security vulnerabilities, please do not open a public issue. Instead, send your report privately:
 
-- **Email**: security@franksplace.com *(replace with your actual email)*
+- **Email**: [security@updatehauler.dev](mailto:security@updatehauler.dev)
 - **GitHub Security Advisory**: Use GitHub's private vulnerability reporting feature:
   1. Go to the [Security tab](https://github.com/franksplace/updatehauler/security)
   2. Click "Report a vulnerability"
@@ -153,7 +153,7 @@ Monitor releases for security-related updates by:
 
 For security questions or concerns not related to a vulnerability report:
 
-- **Email**: security@franksplace.com *(replace with your actual email)*
+- **Email**: [security@updatehauler.dev](mailto:security@updatehauler.dev)
 - **GitHub**: [Security Discussions](https://github.com/franksplace/updatehauler/security)
 
 ## Acknowledgments
