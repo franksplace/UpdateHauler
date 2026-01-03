@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
-use clap::Parser;
 use std::env;
+
+use clap::Parser;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -8,59 +9,57 @@ use std::process::{Command, ExitCode, Stdio};
 use std::sync::mpsc;
 use std::thread;
 
-mod config;
-mod insights;
-mod logger;
-mod package_manager;
-mod plugins;
-mod scheduler;
-mod self_install;
-mod utils;
-
-use config::Config;
-use insights::Insights;
-use logger::Logger;
-use package_manager::PackageManager;
-use plugins::{
-    brew::BrewPlugin, cargo::CargoPlugin, nvim::NvimPlugin, os::OsPlugin, PluginRegistry,
+use update_hauler::config::Config;
+use update_hauler::insights::Insights;
+use update_hauler::logger::Logger;
+use update_hauler::plugins::{
+    BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, PluginActionType, PluginRegistry,
 };
-use scheduler::Scheduler;
-use self_install::SelfInstaller;
+use update_hauler::scheduler::Scheduler;
+use update_hauler::self_install::SelfInstaller;
 
-#[derive(Parser, Debug)]
-#[command(
-    name = "updatehauler",
-    version = env!("CARGO_PKG_VERSION"),
-    about = "System package update manager for macOS and Linux",
-    long_about = None,
-    after_help = r#"
+fn build_help_text() -> &'static str {
+    let mut help = String::from(
+        r#"
 ACTIONS:
 
 Update Actions:
-  brew               Update, upgrade, and clean brew formulas and casks
-  cargo              Upgrade cargo installed packages (requires cargo-install-update)
-  nvim               Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)
-  os                 Update OS & app based packages
+"#,
+    );
 
-Other Actions:
-  brew-save          Save the brew bundle to Brewfile
-  brew-restore       Restore from the brew bundle
+    let registry = create_plugin_registry();
 
-  cargo-save         Save cargo packages to backup JSON (requires cargo-backup)
-  cargo-restore      Restore cargo packages from backup JSON (requires cargo-restore)
+    for metadata in registry.get_all_metadata() {
+        help.push_str(&format!(
+            "  {:<18} {}\n",
+            metadata.name, metadata.description
+        ));
 
-  nvim-save          Save nvim plugin configuration (plugins are defined in your config)
-  nvim-restore       Restore nvim plugins
+        for action in &metadata.actions {
+            if action.name != metadata.name {
+                help.push_str(&format!("  {:<18} {}\n", action.name, action.description));
+            }
+        }
+    }
 
+    help.push_str(
+        r#"
+Schedule Actions:
   schedule enable    Enable scheduled updates (cron on Linux, launchd on macOS)
   schedule disable   Disable scheduled updates
   schedule check     Check current scheduling status
 
+Maintenance Actions:
   trim-logfile       Trim logfile to max lines
 
+Self-Installation Actions:
   install            Install this script to system
   update             Update this script on the system
   remove             Remove this script from system
+  install-completions Install shell completions (bash, zsh)
+
+Plugin Help:
+  <plugin> help      Show detailed help for a specific plugin
 
 Default Actions (when no actions specified):
   Controlled by YAML config or: os, brew, cargo, brew-save, cargo-save, trim-logfile
@@ -75,7 +74,88 @@ Examples:
   updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
   updatehauler schedule enable       # Enable daily updates at 2 AM
   updatehauler --run "echo hello"    # Run arbitrary command
-"#
+  updatehauler brew help            # Show detailed help for brew plugin
+  updatehauler install-completions  # Install shell completions
+"#,
+    );
+
+    Box::leak(help.into_boxed_str())
+}
+
+fn build_plugin_help(plugin_name: &str) -> String {
+    let registry = create_plugin_registry();
+
+    if let Some(plugin) = registry.get_plugin(plugin_name) {
+        let metadata = plugin.get_metadata();
+        let mut help = format!(
+            r#"
+Plugin: {}
+
+Description: {}
+
+Available Actions:
+"#,
+            metadata.name, metadata.description
+        );
+
+        for action in &metadata.actions {
+            let action_type_str = match &action.action_type {
+                Some(PluginActionType::Update) => " (update)",
+                Some(PluginActionType::Save) => " (save)",
+                Some(PluginActionType::Restore) => " (restore)",
+                None => " (custom)",
+            };
+            help.push_str(&format!(
+                "  {:<20} {}{}\n",
+                action.name, action.description, action_type_str
+            ));
+        }
+
+        help.push_str("\nExamples:\n");
+        help.push_str(&format!(
+            "  updatehauler {}                # {}\n",
+            metadata.name,
+            if !metadata.actions.is_empty() {
+                &metadata.actions[0].description
+            } else {
+                "default action"
+            }
+        ));
+
+        for action in &metadata.actions {
+            if action.name != metadata.name {
+                help.push_str(&format!(
+                    "  updatehauler {:<20} # {}\n",
+                    action.name, action.description
+                ));
+            }
+        }
+
+        help
+    } else {
+        format!(
+            "Error: Unknown plugin '{}'\n\nAvailable plugins: brew, cargo, nvim, os\nRun 'updatehauler --help' for more information.",
+            plugin_name
+        )
+    }
+}
+
+fn create_plugin_registry() -> PluginRegistry<'static> {
+    let mut registry = PluginRegistry::new();
+    registry.register(Box::new(BrewPlugin));
+    registry.register(Box::new(CargoPlugin));
+    registry.register(Box::new(NvimPlugin));
+    registry.register(Box::new(OsPlugin));
+    registry
+}
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "updatehauler",
+    version = env!("CARGO_PKG_VERSION"),
+    about = "System package update manager for macOS and Linux",
+    long_about = None,
+    after_help = build_help_text()
 )]
 struct Args {
     #[arg(long, help = "Enable debug output")]
@@ -251,12 +331,6 @@ fn main() -> Result<ExitCode> {
         config.cargo_file = PathBuf::from(cargo_file);
     }
 
-    let mut plugin_registry = PluginRegistry::new();
-    plugin_registry.register(Box::new(BrewPlugin));
-    plugin_registry.register(Box::new(CargoPlugin));
-    plugin_registry.register(Box::new(NvimPlugin));
-    plugin_registry.register(Box::new(OsPlugin));
-
     let rt = tokio::runtime::Runtime::new()?;
 
     let mut logger = Logger::new(&config);
@@ -269,28 +343,39 @@ fn main() -> Result<ExitCode> {
 
     let mut actions = args.actions;
 
+    let plugin_registry = create_plugin_registry();
+
+    if actions.len() == 2 {
+        let first = &actions[0];
+        let second = &actions[1];
+
+        if second == "--help" || second == "help" {
+            if plugin_registry.get_plugin(first).is_some() {
+                println!("{}", build_plugin_help(first));
+                return Ok(ExitCode::SUCCESS);
+            } else {
+                eprintln!("Error: Unknown plugin '{}'\n\nAvailable plugins: brew, cargo, nvim, os\nRun 'updatehauler --help' for more information.", first);
+                return Ok(ExitCode::FAILURE);
+            }
+        }
+    }
+
     let mut no_action = false;
 
     for action in &actions.clone() {
         match action.as_str() {
-            "install" | "update" | "remove" => {
+            "install" | "update" | "remove" | "install-completions" => {
                 let installer = SelfInstaller::new(&config, &insights);
                 match action.as_str() {
                     "install" => installer.install()?,
                     "update" => installer.update()?,
                     "remove" => installer.remove()?,
+                    "install-completions" => {
+                        installer.install_completions(&["bash", "zsh"])?;
+                        return Ok(ExitCode::SUCCESS);
+                    }
                     _ => unreachable!(),
                 }
-                no_action = true;
-            }
-            "brew-restore" => {
-                let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                pm.brew_restore()?;
-                no_action = true;
-            }
-            "cargo-restore" => {
-                let mut pm = PackageManager::new(&config, &insights, &mut logger);
-                pm.cargo_restore()?;
                 no_action = true;
             }
             "schedule" => {
@@ -335,68 +420,18 @@ fn main() -> Result<ExitCode> {
 
     for action in &actions {
         match action.as_str() {
-            "brew" => {
-                if let Some(plugin) = plugin_registry.get_plugin("brew") {
-                    if rt.block_on(plugin.check_available(&config, &insights)) {
-                        rt.block_on(plugin.update(&config, &insights, &mut logger))?;
-                    } else {
-                        logger.error("missing dependency — brew (Homebrew) is not installed");
-                    }
-                }
-            }
-            "brew-save" => {
-                if let Some(plugin) = plugin_registry.get_plugin("brew") {
-                    if rt.block_on(plugin.check_available(&config, &insights)) {
-                        rt.block_on(plugin.save(&config, &insights, &mut logger))?;
-                    } else {
-                        logger.error("missing dependency — brew (Homebrew) is not installed");
-                    }
-                }
-            }
-            "cargo" => {
-                if let Some(plugin) = plugin_registry.get_plugin("cargo") {
-                    if rt.block_on(plugin.check_available(&config, &insights)) {
-                        rt.block_on(plugin.update(&config, &insights, &mut logger))?;
-                    } else {
-                        logger.error("missing dependency — cargo is not installed");
-                    }
-                }
-            }
-            "cargo-save" => {
-                if let Some(plugin) = plugin_registry.get_plugin("cargo") {
-                    if rt.block_on(plugin.check_available(&config, &insights)) {
-                        rt.block_on(plugin.save(&config, &insights, &mut logger))?;
-                    } else {
-                        logger.error("missing dependency — cargo is not installed");
-                    }
-                }
-            }
-            "nvim" => {
-                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
-                    rt.block_on(plugin.update(&config, &insights, &mut logger))?;
-                }
-            }
-            "nvim-save" => {
-                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
-                    rt.block_on(plugin.save(&config, &insights, &mut logger))?;
-                }
-            }
-            "nvim-restore" => {
-                if let Some(plugin) = plugin_registry.get_plugin("nvim") {
-                    rt.block_on(plugin.restore(&config, &insights, &mut logger))?;
-                }
-            }
-            "os" => {
-                if let Some(plugin) = plugin_registry.get_plugin("os") {
-                    rt.block_on(plugin.update(&config, &insights, &mut logger))?;
-                }
-            }
             "trim-logfile" => {
                 trim_logfile(&config, &mut logger)?;
             }
             _ => {
-                logger.error(&format!("Invalid action: {}", action));
-                logger.error("Run 'updatehauler --help' to see available actions");
+                if let Err(e) = rt.block_on(plugin_registry.execute_action(
+                    action,
+                    &config,
+                    &insights,
+                    &mut logger,
+                )) {
+                    logger.error(&e.to_string());
+                }
             }
         }
     }

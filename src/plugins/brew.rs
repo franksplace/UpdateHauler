@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use duct::cmd;
 
-use super::Plugin;
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
@@ -101,6 +101,30 @@ impl BrewPlugin {
 impl Plugin for BrewPlugin {
     fn name(&self) -> &str {
         "brew"
+    }
+
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "brew".to_string(),
+            description: "Update, upgrade, and clean brew formulas and casks".to_string(),
+            actions: vec![
+                PluginAction {
+                    name: "brew".to_string(),
+                    description: "Update, upgrade, and clean brew formulas and casks".to_string(),
+                    action_type: Some(PluginActionType::Update),
+                },
+                PluginAction {
+                    name: "brew-save".to_string(),
+                    description: "Save the brew bundle to Brewfile".to_string(),
+                    action_type: Some(PluginActionType::Save),
+                },
+                PluginAction {
+                    name: "brew-restore".to_string(),
+                    description: "Restore from the brew bundle".to_string(),
+                    action_type: Some(PluginActionType::Restore),
+                },
+            ],
+        }
     }
 
     async fn check_available(&self, _config: &Config, insights: &Insights) -> bool {

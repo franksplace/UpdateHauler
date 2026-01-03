@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use duct::cmd;
 use std::path::PathBuf;
 
-use super::Plugin;
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
@@ -12,6 +12,35 @@ use which::which;
 pub struct NvimPlugin;
 
 impl NvimPlugin {
+    fn get_metadata_internal(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "nvim".to_string(),
+            description: "Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)"
+                .to_string(),
+            actions: vec![
+                PluginAction {
+                    name: "nvim".to_string(),
+                    description:
+                        "Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)"
+                            .to_string(),
+                    action_type: Some(PluginActionType::Update),
+                },
+                PluginAction {
+                    name: "nvim-save".to_string(),
+                    description:
+                        "Save nvim plugin configuration (plugins are defined in your config)"
+                            .to_string(),
+                    action_type: Some(PluginActionType::Save),
+                },
+                PluginAction {
+                    name: "nvim-restore".to_string(),
+                    description: "Restore nvim plugins".to_string(),
+                    action_type: Some(PluginActionType::Restore),
+                },
+            ],
+        }
+    }
+
     fn run_cmd(
         config: &Config,
         logger: &mut Logger,
@@ -116,79 +145,49 @@ impl NvimPlugin {
         }
     }
 
-    async fn update_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn update_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
         let lazy_update_cmd = "nvim --headless '+Lazy! sync' +qa";
-        let args = vec!["-c", lazy_update_cmd];
-
-        logger.log("Updating lazy.nvim plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", lazy_update_cmd])
     }
 
-    async fn update_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn update_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
         let packer_update_cmd = "nvim --headless '+PackerSync' +qa";
-        let args = vec!["-c", packer_update_cmd];
-
-        logger.log("Updating packer.nvim plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", packer_update_cmd])
     }
 
-    async fn update_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn update_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
         let plug_update_cmd = "nvim --headless '+PlugUpdate --sync' +qa";
-        let args = vec!["-c", plug_update_cmd];
-
-        logger.log("Updating vim-plug plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", plug_update_cmd])
     }
 
-    async fn save_lazy_nvim(_config: &Config, logger: &mut Logger) -> Result<()> {
+    fn save_lazy_nvim(_config: &Config, logger: &mut Logger) -> Result<()> {
         logger.log("lazy.nvim plugins are defined in your lazy.nvim configuration");
         Ok(())
     }
 
-    async fn save_packer_nvim(_config: &Config, logger: &mut Logger) -> Result<()> {
+    fn save_packer_nvim(_config: &Config, logger: &mut Logger) -> Result<()> {
         logger.log("packer.nvim plugins are defined in your packer.nvim configuration");
         Ok(())
     }
 
-    async fn save_vim_plug(_config: &Config, logger: &mut Logger) -> Result<()> {
+    fn save_vim_plug(_config: &Config, logger: &mut Logger) -> Result<()> {
         logger.log("vim-plug plugins are defined in your vim-plug configuration");
         Ok(())
     }
 
-    async fn restore_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn restore_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
         let lazy_install_cmd = "nvim --headless '+Lazy! sync' +qa";
-        let args = vec!["-c", lazy_install_cmd];
-
-        logger.log("Restoring lazy.nvim plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", lazy_install_cmd])
     }
 
-    async fn restore_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn restore_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
         let packer_install_cmd = "nvim --headless '+PackerInstall' +qa";
-        let args = vec!["-c", packer_install_cmd];
-
-        logger.log("Restoring packer.nvim plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", packer_install_cmd])
     }
 
-    async fn restore_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
+    fn restore_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
         let plug_install_cmd = "nvim --headless '+PlugInstall --sync' +qa";
-        let args = vec!["-c", plug_install_cmd];
-
-        logger.log("Restoring vim-plug plugins");
-        Self::run_cmd(config, logger, true, "nvim", &args)?;
-
-        Ok(())
+        Self::run_cmd(config, logger, false, "nvim", &["-c", plug_install_cmd])
     }
 }
 
@@ -196,6 +195,10 @@ impl NvimPlugin {
 impl Plugin for NvimPlugin {
     fn name(&self) -> &str {
         "nvim"
+    }
+
+    fn get_metadata(&self) -> PluginMetadata {
+        self.get_metadata_internal()
     }
 
     async fn check_available(&self, _config: &Config, _insights: &Insights) -> bool {
@@ -211,9 +214,9 @@ impl Plugin for NvimPlugin {
         let plugin_manager = Self::detect_plugin_manager();
 
         match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::update_lazy_nvim(config, logger).await?,
-            Some("packer.nvim") => Self::update_packer_nvim(config, logger).await?,
-            Some("vim-plug") => Self::update_vim_plug(config, logger).await?,
+            Some("lazy.nvim") => Self::update_lazy_nvim(config, logger)?,
+            Some("packer.nvim") => Self::update_packer_nvim(config, logger)?,
+            Some("vim-plug") => Self::update_vim_plug(config, logger)?,
             _ => {
                 logger.log("No supported nvim plugin manager detected (lazy.nvim, packer.nvim, or vim-plug)");
                 return Ok(());
@@ -227,9 +230,9 @@ impl Plugin for NvimPlugin {
         let plugin_manager = Self::detect_plugin_manager();
 
         match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::save_lazy_nvim(config, logger).await?,
-            Some("packer.nvim") => Self::save_packer_nvim(config, logger).await?,
-            Some("vim-plug") => Self::save_vim_plug(config, logger).await?,
+            Some("lazy.nvim") => Self::save_lazy_nvim(config, logger)?,
+            Some("packer.nvim") => Self::save_packer_nvim(config, logger)?,
+            Some("vim-plug") => Self::save_vim_plug(config, logger)?,
             _ => {
                 logger.log("No supported nvim plugin manager detected");
             }
@@ -247,9 +250,9 @@ impl Plugin for NvimPlugin {
         let plugin_manager = Self::detect_plugin_manager();
 
         match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::restore_lazy_nvim(config, logger).await?,
-            Some("packer.nvim") => Self::restore_packer_nvim(config, logger).await?,
-            Some("vim-plug") => Self::restore_vim_plug(config, logger).await?,
+            Some("lazy.nvim") => Self::restore_lazy_nvim(config, logger)?,
+            Some("packer.nvim") => Self::restore_packer_nvim(config, logger)?,
+            Some("vim-plug") => Self::restore_vim_plug(config, logger)?,
             _ => {
                 logger.log("No supported nvim plugin manager detected");
             }

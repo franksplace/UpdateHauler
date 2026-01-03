@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use duct::cmd;
 
-use super::Plugin;
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
@@ -97,6 +97,34 @@ impl CargoPlugin {
 impl Plugin for CargoPlugin {
     fn name(&self) -> &str {
         "cargo"
+    }
+
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "cargo".to_string(),
+            description: "Upgrade cargo installed packages (requires cargo-install-update)"
+                .to_string(),
+            actions: vec![
+                PluginAction {
+                    name: "cargo".to_string(),
+                    description: "Upgrade cargo installed packages (requires cargo-install-update)"
+                        .to_string(),
+                    action_type: Some(PluginActionType::Update),
+                },
+                PluginAction {
+                    name: "cargo-save".to_string(),
+                    description: "Save cargo packages to backup JSON (requires cargo-backup)"
+                        .to_string(),
+                    action_type: Some(PluginActionType::Save),
+                },
+                PluginAction {
+                    name: "cargo-restore".to_string(),
+                    description: "Restore cargo packages from backup JSON (requires cargo-restore)"
+                        .to_string(),
+                    action_type: Some(PluginActionType::Restore),
+                },
+            ],
+        }
     }
 
     async fn check_available(&self, _config: &Config, insights: &Insights) -> bool {

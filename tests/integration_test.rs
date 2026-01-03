@@ -135,4 +135,128 @@ mod tests {
 
         assert!(output.status.success());
     }
+
+    #[test]
+    fn test_plugin_help_brew() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["brew", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: brew"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("brew"));
+        assert!(stdout.contains("brew-save"));
+        assert!(stdout.contains("brew-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_cargo() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["cargo", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: cargo"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("cargo"));
+        assert!(stdout.contains("cargo-save"));
+        assert!(stdout.contains("cargo-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_nvim() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["nvim", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: nvim"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("nvim"));
+        assert!(stdout.contains("nvim-save"));
+        assert!(stdout.contains("nvim-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_os() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["os", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: os"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("os"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_invalid() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["invalid-plugin", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        assert!(!output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        assert!(
+            stdout.contains("Error: Unknown plugin") || stderr.contains("Error: Unknown plugin")
+        );
+        assert!(
+            stdout.contains("Available plugins: brew, cargo, nvim, os")
+                || stderr.contains("Available plugins: brew, cargo, nvim, os")
+        );
+    }
 }

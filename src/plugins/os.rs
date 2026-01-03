@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use duct::cmd;
 
-use super::Plugin;
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
@@ -103,6 +103,18 @@ impl Plugin for OsPlugin {
         "os"
     }
 
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "os".to_string(),
+            description: "Update OS & app based packages".to_string(),
+            actions: vec![PluginAction {
+                name: "os".to_string(),
+                description: "Update OS & app based packages".to_string(),
+                action_type: Some(PluginActionType::Update),
+            }],
+        }
+    }
+
     async fn check_available(&self, _config: &Config, insights: &Insights) -> bool {
         insights.is_darwin || insights.is_linux
     }
@@ -132,10 +144,7 @@ impl Plugin for OsPlugin {
                 )?;
             }
 
-            let mas_result = cmd("mas", &["version"]).stdout_null().run();
-            if mas_result.is_ok() {
-                Self::run_cmd(config, logger, true, "mas", &["update"])?;
-            }
+            Self::run_cmd(config, logger, true, "mas", &["update"])?;
 
             return Ok(());
         }
