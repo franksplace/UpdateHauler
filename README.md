@@ -1,5 +1,10 @@
 # UpdateHauler
 
+[![CI Status](https://github.com/franksplace/updatehauler/workflows/PR%20Check/badge.svg)](https://github.com/franksplace/updatehauler/actions)
+[![Coverage](https://codecov.io/gh/franksplace/updatehauler/branch/main/graph/badge.svg)](https://codecov.io/gh/franksplace/updatehauler)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Dependabot](https://badges.dependabot.com/badges/status?host=github.com&repo=franksplace/updatehauler)](https://github.com/franksplace/updatehauler)
+
 UpdateHauler is a command-line caretaker for your entire development stack that rounds up, updates, and tidies everything in one go: operating system packages (macOS, Linux), Homebrew formulae and casks, Cargo crates, and any other updatable tools you wire in.
 
 ## Features
@@ -263,6 +268,9 @@ UpdateHauler supports an optional YAML configuration file for more advanced cust
 **Custom location:** Use `--config` flag to specify a custom path
 
 Example configuration:
+
+See `examples/config.yaml` for a complete, annotated example configuration.
+
 ```yaml
 # Debug and output options
 debug: false
@@ -421,6 +429,36 @@ updatehauler --dry-run brew brew-save cargo cargo-save
 ```bash
 cargo install updatehauler
 ```
+
+### Shell Completions
+
+UpdateHauler includes shell completions for bash and zsh:
+
+```bash
+# Install completions (creates files in ~/.local/bin/completions/)
+updatehauler install-completions bash zsh
+```
+
+#### Enable Completions
+
+**For bash:**
+```bash
+# Add to ~/.bashrc or ~/.bash_profile
+source ~/.local/bin/completions/bash/updatehauler.bash
+```
+
+**For zsh:**
+```bash
+# Add to ~/.zshrc
+fpath=(~/.local/bin/completions/zsh $fpath)
+autoload -U compinit && compinit
+```
+
+Once enabled, completions will automatically suggest:
+- Plugins: `brew`, `cargo`, `nvim`, `os`
+- Actions: `brew-save`, `brew-restore`, `cargo-save`, etc.
+- Commands: `install`, `update`, `remove`, `install-completions`
+- Flags: `--help`, `--dry-run`, `--debug`, etc.
 
 ### CI/CD Integration
 

@@ -5,7 +5,7 @@ edition = "2021"
 description = "System package update manager for macOS and Linux"
 authors = ["Frank"]
 license = "Apache-2.0"
-repository = "https://github.com/franksplace/updatehauler"
+repository = "https://github.com/franksplace/UpdateHauler"
 
 [[bin]]
 name = "updatehauler"

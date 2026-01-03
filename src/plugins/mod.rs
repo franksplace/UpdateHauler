@@ -12,11 +12,55 @@ pub use os::OsPlugin;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use std::collections::HashSet;
 
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 
+/// Simple character difference for fuzzy matching
+#[allow(clippy::needless_range_loop)]
+pub fn levenshtein_distance(a: &str, b: &str) -> usize {
+    let a_chars: Vec<char> = a.chars().collect();
+    let b_chars: Vec<char> = b.chars().collect();
+
+    let m = a_chars.len();
+    let n = b_chars.len();
+
+    if m == 0 {
+        return n;
+    }
+    if n == 0 {
+        return m;
+    }
+
+    let mut dp = vec![vec![0usize; n + 1]; m + 1];
+
+    for i in 0..=m {
+        dp[i][0] = i;
+    }
+
+    for j in 0..=n {
+        dp[0][j] = j;
+    }
+
+    for i in 1..=m {
+        for j in 1..=n {
+            let cost = if a_chars[i - 1] == b_chars[j - 1] {
+                0
+            } else {
+                1
+            };
+            dp[i][j] = (dp[i - 1][j] + 1)
+                .min(dp[i][j - 1] + 1)
+                .min(dp[i - 1][j - 1] + cost);
+        }
+    }
+
+    dp[m][n]
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum PluginActionType {
     Update,
     Save,
@@ -54,10 +98,24 @@ pub trait Plugin: Send + Sync {
         insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()>;
+
+    /// Handle custom actions (optional)
+    /// Override this method to handle custom actions beyond update/save/restore
+    /// Returns false if the action is not recognized
+    async fn handle_custom_action(
+        &self,
+        _action_name: &str,
+        _config: &Config,
+        _insights: &Insights,
+        _logger: &mut Logger,
+    ) -> Result<bool> {
+        // Default implementation: return false (action not handled)
+        Ok(false)
+    }
 }
 
 pub struct PluginRegistry<'a> {
-    plugins: Vec<Box<dyn Plugin + 'a>>,
+    pub plugins: Vec<Box<dyn Plugin + 'a>>,
 }
 
 impl<'a> PluginRegistry<'a> {
@@ -94,6 +152,50 @@ impl<'a> PluginRegistry<'a> {
         self.plugins.iter().map(|p| p.get_metadata()).collect()
     }
 
+    /// Find similar action names for helpful error messages
+    pub fn find_similar_actions(&self, action_name: &str) -> Vec<String> {
+        let mut similar = Vec::new();
+        let available_actions = self.get_all_action_names();
+
+        for action in available_actions {
+            // Check for exact match or simple typos (one character difference)
+            if action_name.len() > 2 && action.len() > 2 {
+                let distance = levenshtein_distance(action_name, &action);
+                if distance == 0 || distance == 1 || (distance == 2 && action.len() > 4) {
+                    similar.push(action);
+                }
+            }
+            // Check for prefix match (e.g., "brew" vs "brew-save")
+            else if action.starts_with(action_name) || action_name.starts_with(&action) {
+                similar.push(action);
+            }
+        }
+
+        // Limit to 3 suggestions
+        similar.truncate(3);
+        similar
+    }
+
+    /// Get all available action names
+    pub fn get_all_action_names(&self) -> Vec<String> {
+        let mut action_names = HashSet::new();
+        for metadata in self.get_all_metadata() {
+            for action in metadata.actions {
+                action_names.insert(action.name.clone());
+            }
+            // Add non-plugin commands
+            action_names.insert("install".to_string());
+            action_names.insert("update".to_string());
+            action_names.insert("remove".to_string());
+            action_names.insert("install-completions".to_string());
+            action_names.insert("schedule enable".to_string());
+            action_names.insert("schedule disable".to_string());
+            action_names.insert("schedule check".to_string());
+            action_names.insert("trim-logfile".to_string());
+        }
+        action_names.into_iter().collect()
+    }
+
     pub async fn execute_action(
         &self,
         action_name: &str,
@@ -119,15 +221,34 @@ impl<'a> PluginRegistry<'a> {
                         Some(PluginActionType::Restore) => {
                             plugin.restore(config, insights, logger).await?
                         }
-                        None => plugin.update(config, insights, logger).await?,
+                        None => {
+                            // Custom action - call handle_custom_action
+                            if plugin
+                                .handle_custom_action(action_name, config, insights, logger)
+                                .await?
+                            {
+                                return Ok(());
+                            } else {
+                                plugin.update(config, insights, logger).await?
+                            }
+                        }
                     }
                     return Ok(());
                 }
             }
         }
+        // Provide helpful suggestions for typos
+        let similar = self.find_similar_actions(action_name);
+        let suggestion = if similar.is_empty() {
+            String::new()
+        } else {
+            format!("\nDid you mean: {}?", similar.join(", "))
+        };
+
         anyhow::bail!(
-            "Invalid action: {}. Run 'updatehauler --help' for available actions.",
-            action_name
+            "Invalid action: {}. Run 'updatehauler --help' for available actions.{}",
+            action_name,
+            suggestion
         )
     }
 
