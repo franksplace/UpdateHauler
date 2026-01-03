@@ -1,0 +1,71 @@
+version: 2
+updates:
+  # Enable version updates for Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 10
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+    allow:
+      # Allow production dependencies only (exclude dev dependencies from automatic updates)
+      - dependency-type: "direct"
+
+  # Group production dependency updates together
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 5
+    groups:
+      # Group minor and patch updates together
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "test-*"
+          - "mock-*"
+          - "fake-*"
+    labels:
+      - "dependencies"
+      - "grouped"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # Group GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+
+# Configure pull request review requirements
+pull-requests:
+  # Assign reviewers based on dependency type
+  reviewers:
+    - "franksplace"  # Replace with actual reviewer username(s)
+
+# Limit concurrent open pull requests
+open-pull-requests-limit: 15

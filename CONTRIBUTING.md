@@ -224,6 +224,7 @@ UpdateHauler uses [semantic versioning](https://semver.org/):
 - Check [README.md](README.md) for usage
 - See [PLUGIN_DEV.md](PLUGIN_DEV.md) for plugin development
 - Review [CLI_DESIGN.md](CLI_DESIGN.md) for design decisions
+- See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting
 - Open an issue for bugs or feature requests
 
 ## License

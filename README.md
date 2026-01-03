@@ -576,6 +576,12 @@ This test suite validates:
 
 The release binary will be located at `target/release/updatehauler`.
 
+## Security
+
+If you discover a security vulnerability, please see our [Security Policy](SECURITY.md) for information on reporting vulnerabilities responsibly.
+
+We take security seriously and will address security issues promptly. Please do not open public issues for security vulnerabilities.
+
 ## License
 
 Apache-2.0
