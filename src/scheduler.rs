@@ -165,6 +165,7 @@ impl<'a> Scheduler<'a> {
             .context("Failed to create LaunchAgents directory")?;
 
         let app_path = self.insights.app_abspath.to_string_lossy().to_string();
+        let path_env = self.config.get_scheduler_path();
 
         let plist_content = format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -179,12 +180,19 @@ impl<'a> Scheduler<'a> {
     <string>{}</string>
     <string>--logfile-only</string>
   </array>
-{}
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>{}</string>
+  </dict>
+ {}
 </dict>
 </plist>
 "#,
             label,
             app_path,
+            path_env,
             self.build_calendar_interval()
         );
 

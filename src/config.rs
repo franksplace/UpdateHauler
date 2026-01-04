@@ -181,10 +181,39 @@ impl Config {
     }
 
     pub fn crontab_entry(&self, app_path: &PathBuf) -> String {
+        let path_env = self.get_scheduler_path();
         format!(
-            "{} {:?} --logfile-only 2>&1",
+            "PATH={}; {} {:?} --logfile-only 2>&1",
+            path_env,
             self.crontab_timing(),
             app_path
         )
+    }
+
+    pub fn get_scheduler_path(&self) -> String {
+        let mut path_parts = vec![
+            "/usr/local/bin".to_string(),
+            "/usr/local/sbin".to_string(),
+            "/opt/homebrew/bin".to_string(),
+            "/opt/homebrew/sbin".to_string(),
+            "/usr/bin".to_string(),
+            "/usr/sbin".to_string(),
+            "/bin".to_string(),
+            "/sbin".to_string(),
+        ];
+
+        if let Ok(home) = std::env::var("HOME") {
+            path_parts.push(format!("{}/.cargo/bin", home));
+        }
+
+        if let Ok(current_path) = std::env::var("PATH") {
+            for part in current_path.split(':') {
+                if !path_parts.contains(&part.to_string()) {
+                    path_parts.push(part.to_string());
+                }
+            }
+        }
+
+        path_parts.join(":")
     }
 }
