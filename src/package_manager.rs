@@ -24,40 +24,46 @@ impl<'a> PackageManager<'a> {
         }
     }
 
+    #[allow(dead_code)]
     fn run_cmd(&mut self, show_error: bool, command: &str, args: &[&str]) -> Result<()> {
         let cmd_str = format!("{} {}", command, args.join(" "));
 
-        // Get short command name for prefixing output
         let short_cmd = if command == "sudo" && args.len() >= 4 {
-            // For sudo sh -c "command", extract the actual command
             args[3]
         } else {
             command
         };
 
+        if self.config.dry_run {
+            if self.config.show_header {
+                self.logger.log(&format!("{} → Start (DRY-RUN)", cmd_str));
+            }
+            self.logger.log(&format!("Would execute: {}", cmd_str));
+            if self.config.show_header {
+                self.logger
+                    .log(&format!("{} → Return code 0 (DRY-RUN)", cmd_str));
+            }
+            return Ok(());
+        }
+
         if self.config.show_header {
             self.logger.log(&format!("{} → Start", cmd_str));
         }
 
-        // Spawn the process
         let mut child = Command::new(command)
             .args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
 
-        // Get the stdout and stderr handles
         let stdout = child.stdout.take().expect("Failed to capture stdout");
         let stderr = child.stderr.take().expect("Failed to stderr");
 
-        // Create a channel for the main thread to receive log messages
         let (sender, receiver) = mpsc::channel::<String>();
 
-        // Clone the necessary values for the threads
         let sender_stdout = sender.clone();
         let sender_stderr = sender;
 
-        // Spawn a thread to read stdout
         let stdout_thread = thread::spawn(move || {
             let reader = BufReader::new(stdout);
             for line in reader.lines().map_while(Result::ok) {
@@ -65,7 +71,6 @@ impl<'a> PackageManager<'a> {
             }
         });
 
-        // Spawn a thread to read stderr
         let stderr_thread = thread::spawn(move || {
             let reader = BufReader::new(stderr);
             for line in reader.lines().map_while(Result::ok) {
@@ -73,7 +78,6 @@ impl<'a> PackageManager<'a> {
             }
         });
 
-        // Read log messages from the channel and log them in real-time
         for received in receiver {
             if !received.is_empty() {
                 let formatted = if self.config.show_header {
@@ -85,11 +89,9 @@ impl<'a> PackageManager<'a> {
             }
         }
 
-        // Wait for both threads to complete
         let _ = stdout_thread.join();
         let _ = stderr_thread.join();
 
-        // Wait for the process to complete and get the exit code
         let exit_code = child.wait()?.code().unwrap_or(0);
 
         if self.config.show_header {
@@ -105,6 +107,7 @@ impl<'a> PackageManager<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn brew_update(&mut self) -> Result<()> {
         if !self.insights.has_brew {
             return Ok(());
@@ -122,6 +125,7 @@ impl<'a> PackageManager<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn brew_save(&mut self) -> Result<()> {
         if !self.insights.has_brew {
             return Ok(());
@@ -167,6 +171,7 @@ impl<'a> PackageManager<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn cargo_update(&mut self) -> Result<()> {
         if !self.insights.has_cargo {
             return Ok(());
@@ -182,6 +187,7 @@ impl<'a> PackageManager<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn cargo_save(&mut self) -> Result<()> {
         if !self.insights.has_cargo {
             return Ok(());
@@ -240,9 +246,18 @@ impl<'a> PackageManager<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn os_update(&mut self) -> Result<()> {
         if self.insights.is_darwin {
-            self.run_cmd(true, "softwareupdate", &["-a", "-i", "--verbose"])?;
+            // On macOS, try softwareupdate with sudo for authentication in CI environments
+            // If that fails, try without sudo for regular user environments
+            let softwareupdate_result =
+                self.run_cmd(false, "sudo", &["softwareupdate", "-a", "-i", "--verbose"]);
+
+            if softwareupdate_result.is_err() {
+                // If sudo fails, try without sudo
+                self.run_cmd(true, "softwareupdate", &["-a", "-i", "--verbose"])?;
+            }
 
             self.run_cmd(true, "mas", &["update"])?;
 

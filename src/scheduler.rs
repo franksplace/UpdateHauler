@@ -102,6 +102,17 @@ impl<'a> Scheduler<'a> {
     fn cron_check(&mut self) -> Result<()> {
         let current_tab = self.get_crontab()?;
 
+        if self.config.dry_run {
+            self.logger.log("Would check crontab status (DRY-RUN)");
+            if current_tab.is_empty() {
+                self.logger.log("no crontab at all enabled (DRY-RUN)");
+            } else {
+                self.logger
+                    .log(&format!("Current crontab:\n{} (DRY-RUN)", current_tab));
+            }
+            return Ok(());
+        }
+
         if current_tab.is_empty() {
             self.logger.error("no crontab at all enabled");
             return Ok(());
@@ -154,6 +165,7 @@ impl<'a> Scheduler<'a> {
             .context("Failed to create LaunchAgents directory")?;
 
         let app_path = self.insights.app_abspath.to_string_lossy().to_string();
+        let path_env = self.config.get_scheduler_path();
 
         let plist_content = format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -168,12 +180,19 @@ impl<'a> Scheduler<'a> {
     <string>{}</string>
     <string>--logfile-only</string>
   </array>
-{}
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>{}</string>
+  </dict>
+ {}
 </dict>
 </plist>
 "#,
             label,
             app_path,
+            path_env,
             self.build_calendar_interval()
         );
 
@@ -258,6 +277,15 @@ impl<'a> Scheduler<'a> {
         let launch_agents_dir = format!("{}/Library/LaunchAgents", home);
         let plist_path = format!("{}/{}.plist", launch_agents_dir, label);
         let plist_path = PathBuf::from(&plist_path);
+
+        if self.config.dry_run {
+            self.logger
+                .log(&format!("LaunchAgent plist: {:?} (DRY-RUN)", plist_path));
+            self.logger.log("Would check plist existence (DRY-RUN)");
+            self.logger.log("Would check launchctl status (DRY-RUN)");
+            self.logger.log("Would check pmset schedule (DRY-RUN)");
+            return Ok(());
+        }
 
         self.logger
             .log(&format!("LaunchAgent plist: {:?}", plist_path));

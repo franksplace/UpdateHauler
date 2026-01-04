@@ -59,7 +59,10 @@ print_section "4. Testing --help"
 ./target/release/updatehauler --help >/tmp/help_output.txt
 if grep -q "Usage:" /tmp/help_output.txt &&
 	grep -q "OPTIONS" /tmp/help_output.txt &&
-	grep -q "ACTION" /tmp/help_output.txt; then
+	grep -q "ACTION" /tmp/help_output.txt &&
+	grep -q "dry-run" /tmp/help_output.txt &&
+	grep -q "nvim" /tmp/help_output.txt &&
+	grep -q "config-file" /tmp/help_output.txt; then
 	print_result "--help command"
 else
 	echo "Error: --help output missing expected sections"
@@ -183,9 +186,24 @@ print_result "--brew-save-file option in help"
 ./target/release/updatehauler --help | grep -q "cargo-save-file"
 print_result "--cargo-save-file option in help"
 
-print_section "13. Testing Multiple Actions"
+print_section "13. Testing --config-file Option"
 
-./target/release/updatehauler os trim-logfile >/tmp/multiple_actions.txt 2>&1
+# Verify --config-file option exists in help (already tested in help section)
+
+# Test with non-existent config file (should work with defaults)
+./target/release/updatehauler --config-file /tmp/nonexistent_config.yaml --dry-run os >/tmp/config_option.txt 2>&1
+if grep -q "Would execute:" /tmp/config_option.txt; then
+	print_result "--config-file option works with non-existent file"
+else
+	echo "Error: --config-file option failed"
+	exit 1
+fi
+
+rm -f /tmp/nonexistent_config.yaml
+
+print_section "14. Testing Multiple Actions"
+
+./target/release/updatehauler --dry-run os trim-logfile >/tmp/multiple_actions.txt 2>&1
 if grep -q "Main → Start" /tmp/multiple_actions.txt &&
 	grep -q "Main → End" /tmp/multiple_actions.txt; then
 	print_result "Multiple actions execution"
@@ -194,7 +212,7 @@ else
 	exit 1
 fi
 
-print_section "14. Testing Debug Flag"
+print_section "15. Testing Debug Flag"
 
 # Just verify debug flag doesn't cause errors (debug output is for config insights, not --run)
 ./target/release/updatehauler --debug --run "echo test" >/tmp/debug_output.txt 2>&1
@@ -206,7 +224,7 @@ else
 	exit 1
 fi
 
-print_section "15. Testing Schedule Commands"
+print_section "16. Testing Schedule Commands"
 
 # Test schedule check (non-destructive)
 ./target/release/updatehauler schedule check >/tmp/schedule_check.txt 2>&1
@@ -221,41 +239,47 @@ fi
 ./target/release/updatehauler --help | grep -q "schedule"
 print_result "schedule in help text"
 
-print_section "16. Testing Schedule Time Flags"
+print_section "17. Testing Schedule Time Flags"
 
 # Test custom schedule time flags (just verify they don't error)
 ./target/release/updatehauler --sched-hour "3" --sched-minute "30" schedule check >/tmp/schedule_flags.txt 2>&1
-if grep -q "LaunchAgent plist" /tmp/schedule_flags.txt; then
+# Check for platform-specific success indicators
+# macOS: "LaunchAgent plist", "plist exists", "launchctl status"
+# Linux: "crontab at all enabled", "No crontab", or "crontab:" (showing crontab content)
+if grep -q "LaunchAgent plist\|LaunchAgent plist:\|launchctl status:\|crontab at all\|No crontab\|crontab:" /tmp/schedule_flags.txt; then
 	print_result "Schedule time flags"
 else
 	echo "Error: Schedule time flags failed"
+	cat /tmp/schedule_flags.txt
 	exit 1
 fi
 
-print_section "17. Testing Backup/Restore Commands"
+print_section "18. Testing Backup/Restore Commands"
 
 # Test that backup commands don't crash (may fail if tools not installed)
-./target/release/updatehauler brew-save >/dev/null 2>&1 || true
-./target/release/updatehauler cargo-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim-save >/dev/null 2>&1 || true
 print_result "Backup commands (no crash)"
 
 # Test that restore commands don't crash (may fail if files not found)
-./target/release/updatehauler brew-restore >/dev/null 2>&1 || true
-./target/release/updatehauler cargo-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim-restore >/dev/null 2>&1 || true
 print_result "Restore commands (no crash)"
 
-print_section "18. Testing Package Detection"
+print_section "19. Testing Package Detection"
 
 # Test that binary correctly detects OS and package managers
-./target/release/updatehauler --run "echo test" >/tmp/detection.txt 2>&1
-if grep -q "test" /tmp/detection.txt; then
+./target/release/updatehauler --dry-run os >/tmp/detection.txt 2>&1
+if grep -q "Would execute:" /tmp/detection.txt; then
 	print_result "OS and package manager detection"
 else
 	echo "Error: OS detection failed"
 	exit 1
 fi
 
-print_section "19. Testing Log File Rotation"
+print_section "20. Testing Log File Rotation"
 
 # Test trim-logfile functionality
 for i in {1..50}; do echo "log line"; done >/tmp/test_trim.log
@@ -268,7 +292,38 @@ else
 	exit 1
 fi
 
-print_section "20. Cleaning Up Test Files"
+print_section "21. Testing Dry-Run Mode"
+
+# Test dry-run doesn't actually update anything
+./target/release/updatehauler --dry-run os >/tmp/dryrun_output.txt 2>&1
+if grep -q "DRY-RUN" /tmp/dryrun_output.txt &&
+	grep -q "Would execute:" /tmp/dryrun_output.txt &&
+	! grep -q "Password" /tmp/dryrun_output.txt; then
+	print_result "Dry-run mode (no password prompts)"
+else
+	echo "Error: Dry-run mode failed"
+	exit 1
+fi
+
+# Test dry-run shows macOS sudo softwareupdate
+./target/release/updatehauler --dry-run os >/tmp/dryrun_os_output.txt 2>&1
+if grep -q "sudo softwareupdate" /tmp/dryrun_os_output.txt; then
+	print_result "Dry-run shows sudo softwareupdate command"
+else
+	echo "Error: Dry-run doesn't show sudo softwareupdate"
+	exit 1
+fi
+
+# Test dry-run with multiple actions
+./target/release/updatehauler --dry-run os brew >/tmp/dryrun_multi.txt 2>&1
+if grep -q "DRY-RUN" /tmp/dryrun_multi.txt; then
+	print_result "Dry-run with multiple actions"
+else
+	echo "Error: Dry-run with multiple actions failed"
+	exit 1
+fi
+
+print_section "22. Cleaning Up Test Files"
 
 rm -f /tmp/help_output.txt /tmp/version_output.txt
 rm -f /tmp/run_output.txt /tmp/stream_output.txt
@@ -279,6 +334,10 @@ rm -f /tmp/installdir.txt /tmp/multiple_actions.txt
 rm -f /tmp/debug_output.txt
 rm -f /tmp/schedule_check.txt /tmp/schedule_flags.txt
 rm -f /tmp/detection.txt /tmp/test_trim.log
+rm -f /tmp/dryrun_output.txt
+rm -f /tmp/config_option.txt
+rm -f /tmp/nonexistent_config.yaml
+rm -f /tmp/dryrun_os_output.txt
 
 print_result "Cleanup"
 

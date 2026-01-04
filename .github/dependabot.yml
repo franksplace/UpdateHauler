@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # Enable version updates for Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    labels:
+      - "dependencies"
+      - "rust"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    allow:
+      # Allow production dependencies only (exclude dev dependencies from automatic updates)
+      - dependency-type: "direct"
+    groups:
+      # Group minor and patch updates together
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "test-*"
+          - "mock-*"
+          - "fake-*"
+
+  # Group GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    commit-message:
+      prefix: "ci"
