@@ -34,7 +34,11 @@ temp/
 *.tmp
 *_temp.*
 *_temp.txt
+test_*
 
+# Test binaries (from rustc in project root)
+test_macro
+test_*
 # OS
 Thumbs.db
 .DS_Store

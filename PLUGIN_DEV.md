@@ -6,6 +6,16 @@ This guide explains how to create custom plugins for updatehauler.
 
 UpdateHauler uses a plugin-based architecture to support different package managers and update tools. Each plugin implements the `Plugin` trait defined in `src/plugins/mod.rs`.
 
+## Quick Start
+
+The fastest way to add a new plugin is:
+
+1. Create plugin file in `src/plugins/`
+2. Add module declaration in `src/plugins/mod.rs`
+3. Register using the `register_plugins!` macro
+
+The macro-based registration is streamlined and reduces boilerplate. See the detailed steps below for the complete process.
+
 ## Plugin Trait
 
 Every plugin must implement the following async trait:
@@ -201,8 +211,44 @@ pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use my_plugin::MyPlugin;  // Add this
 
-// ... rest of the file
+// ... rest of file
 ```
+
+### 4. Register with PluginRegistry
+
+In `src/main.rs`, use the `register_plugins!` macro to register your plugin:
+
+```rust
+use update_hauler::{
+    plugins::BrewPlugin,
+    plugins::CargoPlugin,
+    plugins::NvimPlugin,
+    plugins::OsPlugin,
+    plugins::MyPlugin,  // Add this
+    plugins::PluginActionType,
+    plugins::PluginRegistry,
+    register_plugins,
+};
+
+fn create_plugin_registry() -> PluginRegistry<'static> {
+    let mut registry = PluginRegistry::new();
+    register_plugins!(
+        registry,
+        BrewPlugin,
+        CargoPlugin,
+        NvimPlugin,
+        OsPlugin,
+        MyPlugin,  // Add this
+    );
+    registry
+}
+```
+
+**Benefits of macro-based registration:**
+- Less boilerplate - no repetitive `registry.register(Box::new(...))` lines
+- Consistent registration pattern
+- Easy to add/remove plugins
+- Trailing commas are supported for better diff formatting
 
 ### 4. Register with PluginRegistry
 

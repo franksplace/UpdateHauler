@@ -18,6 +18,17 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 
+/// Macro to register multiple plugins at once
+/// Usage: register_plugins!(registry, BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin);
+#[macro_export]
+macro_rules! register_plugins {
+    ($registry:expr, $($plugin:expr),* $(,)?) => {
+        $(
+            $registry.register(Box::new($plugin));
+        )*
+    };
+}
+
 /// Simple character difference for fuzzy matching
 #[allow(clippy::needless_range_loop)]
 pub fn levenshtein_distance(a: &str, b: &str) -> usize {
@@ -34,7 +45,7 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
         return m;
     }
 
-    let mut dp = vec![vec![0usize; n + 1]; m + 1];
+    let mut dp: Vec<Vec<usize>> = (0..=m).map(|_| vec![0usize; n + 1]).collect();
 
     for i in 0..=m {
         dp[i][0] = i;

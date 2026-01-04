@@ -12,11 +12,12 @@ use std::thread;
 use update_hauler::config::Config;
 use update_hauler::insights::Insights;
 use update_hauler::logger::Logger;
-use update_hauler::plugins::{
-    BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, PluginActionType, PluginRegistry,
-};
 use update_hauler::scheduler::Scheduler;
 use update_hauler::self_install::SelfInstaller;
+use update_hauler::{
+    plugins::BrewPlugin, plugins::CargoPlugin, plugins::NvimPlugin, plugins::OsPlugin,
+    plugins::PluginActionType, plugins::PluginRegistry, register_plugins,
+};
 
 fn build_help_text() -> &'static str {
     let mut help = String::from(
@@ -142,10 +143,7 @@ Available Actions:
 
 fn create_plugin_registry() -> PluginRegistry<'static> {
     let mut registry = PluginRegistry::new();
-    registry.register(Box::new(BrewPlugin));
-    registry.register(Box::new(CargoPlugin));
-    registry.register(Box::new(NvimPlugin));
-    registry.register(Box::new(OsPlugin));
+    register_plugins!(registry, BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin);
     registry
 }
 

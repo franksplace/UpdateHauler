@@ -3,7 +3,7 @@ name = "update_hauler"
 version = "0.1.0"
 edition = "2021"
 description = "System package update manager for macOS and Linux"
-authors = ["Frank"]
+authors = ["FrankStutz"]
 license = "Apache-2.0"
 repository = "https://github.com/franksplace/UpdateHauler"
 

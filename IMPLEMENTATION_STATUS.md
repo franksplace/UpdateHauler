@@ -140,27 +140,314 @@ User Input → Action Detection
 
 ### Planned Features
 1. **Custom Action Handlers**
-   - Add optional `handle_custom_action()` method to Plugin trait
-   - Allow plugins to define custom actions beyond update/save/restore
-   - Enable actions like `brew-list`, `brew-outdated`, etc.
+    - Add optional `handle_custom_action()` method to Plugin trait
+    - Allow plugins to define custom actions beyond update/save/restore
+    - Enable actions like `brew-list`, `brew-outdated`, etc.
 
 2. **Enhanced Error Messages**
-   - Suggest similar action names on typos
-   - Show all valid actions for a plugin on error
-   - Better formatting and styling
+    - Suggest similar action names on typos
+    - Show all valid actions for a plugin on error
+    - Better formatting and styling
 
 3. **Plugin System Improvements**
-   - Action completion for shell
-   - Dynamic plugin loading from external files
-   - Plugin configuration validation
-   - Plugin dependency management
-   - Plugin version compatibility checking
+    - Action completion for shell
+    - Dynamic plugin loading from external files (see Phase 5)
+    - Plugin configuration validation
+    - Plugin dependency management
+    - Plugin version compatibility checking
 
 4. **Testing Improvements**
-   - Add unit tests for help generation
-   - Add tests for per-plugin help
-   - Test edge cases in action execution
-   - Integration tests for full workflows
+    - Add unit tests for help generation
+    - Add tests for per-plugin help
+    - Test edge cases in action execution
+    - Integration tests for full workflows
+
+## Phase 5: Dynamic Plugin Loading (Optional Future Enhancement)
+
+### Overview
+Allow users to install and load plugins without recompiling the main application, similar to how Rust crates work.
+
+### Architecture
+
+```
+~/.config/updatehauler/plugins/
+  ├── libbrew_plugin.so        (or .dylib on macOS, .dll on Windows)
+  ├── libcustom_plugin.so
+  ├── config.yaml              # enabled: [brew, custom]
+  └── README.md
+```
+
+### Implementation Plan
+
+#### 1. Plugin Interface Export
+Create a separate `updatehauler-plugin` crate that exports the Plugin trait:
+
+```rust
+// updatehauler-plugin/src/lib.rs
+pub use update_hauler::plugins::Plugin;
+pub use update_hauler::config::Config;
+pub use update_hauler::insights::Insights;
+pub use update_hauler::logger::Logger;
+
+#[macro_export]
+macro_rules! declare_plugin {
+    ($plugin_type:ty, $name:expr) => {
+        use std::sync::Arc;
+        use update_hauler::plugins::Plugin;
+
+        #[no_mangle]
+        pub extern "C" fn plugin_name() -> *const u8 {
+            concat!($name, "\0").as_ptr()
+        }
+
+        #[no_mangle]
+        pub extern "C" fn create_plugin() -> *mut Plugin {
+            Arc::into_raw(Arc::new(<$plugin_type>::default())) as *mut Plugin
+        }
+    };
+}
+```
+
+#### 2. External Plugin Crate Template
+Create a template for third-party plugins:
+
+```rust
+// external-plugin/Cargo.toml
+[package]
+name = "my_updatehauler_plugin"
+version = "0.1.0"
+crate-type = ["cdylib"]
+
+[dependencies]
+updatehauler-plugin = "0.1"
+async-trait = "0.1"
+anyhow = "1.0"
+
+// external-plugin/src/lib.rs
+use async_trait::async_trait;
+use anyhow::Result;
+use updatehauler_plugin::{Config, Insights, Logger, Plugin, declare_plugin};
+
+pub struct MyPlugin;
+
+#[async_trait]
+impl Plugin for MyPlugin {
+    fn name(&self) -> &str {
+        "my_plugin"
+    }
+
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my_plugin".to_string(),
+            description: "My custom plugin".to_string(),
+            actions: vec![],
+        }
+    }
+
+    async fn check_available(&self, _config: &Config, _insights: &Insights) -> bool {
+        true
+    }
+
+    async fn update(&self, _config: &Config, _insights: &Insights, _logger: &mut Logger) -> Result<()> {
+        Ok(())
+    }
+
+    async fn save(&self, _config: &Config, _insights: &Insights, _logger: &mut Logger) -> Result<()> {
+        Ok(())
+    }
+
+    async fn restore(&self, _config: &Config, _insights: &Insights, _logger: &mut Logger) -> Result<()> {
+        Ok(())
+    }
+}
+
+declare_plugin!(MyPlugin, "my_plugin");
+```
+
+#### 3. Plugin Loader Implementation
+Add a loader in `src/plugins/loader.rs`:
+
+```rust
+use anyhow::{Context, Result};
+use libloading::{Library, Symbol};
+use std::path::PathBuf;
+use crate::plugins::Plugin;
+
+pub struct LoadedPlugin {
+    pub plugin: Box<dyn Plugin>,
+    pub name: String,
+    _library: Library, // Keep library loaded
+}
+
+pub fn load_plugins_from_directory(plugin_dir: PathBuf) -> Result<Vec<LoadedPlugin>> {
+    let mut loaded = Vec::new();
+
+    for entry in std::fs::read_dir(&plugin_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.extension().map_or(false, |ext| {
+            ext == "so" || ext == "dylib" || ext == "dll"
+        }) {
+            match load_plugin(&path) {
+                Ok(plugin) => loaded.push(plugin),
+                Err(e) => eprintln!("Failed to load plugin {:?}: {}", path, e),
+            }
+        }
+    }
+
+    Ok(loaded)
+}
+
+fn load_plugin(path: &PathBuf) -> Result<LoadedPlugin> {
+    unsafe {
+        let library = Library::new(path)
+            .context("Failed to load plugin library")?;
+
+        let plugin_name: Symbol<extern "C" fn() -> *const u8> =
+            library.get(b"plugin_name")
+                .context("Plugin missing plugin_name function")?;
+
+        let create: Symbol<extern "C" fn() -> *mut Plugin> =
+            library.get(b"create_plugin")
+                .context("Plugin missing create_plugin function")?;
+
+        let name_ptr = plugin_name();
+        let name = std::ffi::CStr::from_ptr(name_ptr)
+            .to_string_lossy()
+            .to_string();
+
+        let plugin_ptr = create();
+        let plugin = Box::from_raw(plugin_ptr);
+
+        Ok(LoadedPlugin {
+            plugin,
+            name,
+            _library: library,
+        })
+    }
+}
+```
+
+#### 4. Update PluginRegistry
+Add dynamic loading support:
+
+```rust
+impl<'a> PluginRegistry<'a> {
+    pub fn load_external_plugins(&mut self, plugin_dir: PathBuf) -> Result<usize> {
+        let loaded = load_plugins_from_directory(plugin_dir)?;
+
+        for loaded_plugin in loaded {
+            self.register(loaded_plugin.plugin);
+        }
+
+        Ok(loaded.len())
+    }
+}
+```
+
+#### 5. Update Main
+Load plugins on startup:
+
+```rust
+fn create_plugin_registry() -> PluginRegistry<'static> {
+    let mut registry = PluginRegistry::new();
+
+    // Register built-in plugins
+    register_plugins!(
+        registry,
+        BrewPlugin,
+        CargoPlugin,
+        NvimPlugin,
+        OsPlugin,
+    );
+
+    // Load external plugins
+    let plugin_dir = home.join(".config/updatehauler/plugins");
+    if plugin_dir.exists() {
+        match registry.load_external_plugins(plugin_dir) {
+            Ok(count) => {
+                eprintln!("Loaded {} external plugin(s)", count);
+            }
+            Err(e) => {
+                eprintln!("Warning: Failed to load plugins: {}", e);
+            }
+        }
+    }
+
+    registry
+}
+```
+
+### Configuration
+Update `config.yaml` to support dynamic plugins:
+
+```yaml
+# ~/.config/updatehauler/config.yaml
+plugins:
+  brew: true
+  cargo: true
+  nvim: false
+  os: true
+
+external_plugins:
+  enabled: true
+  directory: "~/.config/updatehauler/plugins"
+  whitelist:
+    - my_plugin
+    - another_plugin
+  blacklist:
+    - unsafe_plugin
+```
+
+### Benefits
+
+| **Dynamic Loading** | **Compile-Time (Current)** |
+|-------------------|----------------------------|
+| ✅ Add plugins without recompiling | ✅ Type safety, no runtime errors |
+| ✅ Users can write custom plugins | ✅ Simpler deployment |
+| ✅ Plugin ecosystem can grow independently | ✅ Faster startup (no dlopen) |
+| ❌ Complex build setup for plugin authors | ❌ Requires rebuild for new plugins |
+| ❌ Security concerns (untrusted code) | ❌ Longer compile times |
+| ❌ Cross-platform library loading | |
+
+### Security Considerations
+
+1. **Sandboxing**: Run plugins in separate processes or with restricted permissions
+2. **Whitelisting**: Only load plugins explicitly listed in config
+3. **Code Signing**: Verify plugin signatures before loading
+4. **Validation**: Check plugin metadata and required functions
+5. **Isolation**: Use `libloading` with `RTLD_LOCAL` to avoid symbol conflicts
+
+### Dependencies Required
+
+```toml
+[dependencies]
+libloading = "0.8"
+```
+
+### Migration Path
+
+1. **Phase 5a**: Create `updatehauler-plugin` crate
+2. **Phase 5b**: Implement plugin loader infrastructure
+3. **Phase 5c**: Update PluginRegistry to support external plugins
+4. **Phase 5d**: Create example external plugin
+5. **Phase 5e**: Add security and validation
+6. **Phase 5f**: Documentation and plugin templates
+
+### Trade-offs
+
+**When to Use Dynamic Plugins:**
+- Multiple users with different needs
+- Corporate/enterprise customization
+- Plugin marketplace or ecosystem
+- Users who don't want to compile Rust
+
+**When to Stick with Compile-Time:**
+- Single-user application
+- Simpler deployment
+- Maximum performance
+- Strong security requirements
 
 ## Current Capabilities
 
