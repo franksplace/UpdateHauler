@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
-    use update_hauler::config::Config;
-    use update_hauler::insights::Insights;
-    use update_hauler::logger::Logger;
+    use updatehauler::config::Config;
+    use updatehauler::insights::Insights;
+    use updatehauler::logger::Logger;
     #[allow(unused_imports)]
-    use update_hauler::plugins::{
+    use updatehauler::plugins::{
         BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, Plugin, PluginRegistry,
     };
 

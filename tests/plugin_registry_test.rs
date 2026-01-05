@@ -1,8 +1,8 @@
-use update_hauler::config::Config;
-use update_hauler::insights::Insights;
-use update_hauler::logger::Logger;
-use update_hauler::plugins::levenshtein_distance;
-use update_hauler::plugins::{
+use updatehauler::config::Config;
+use updatehauler::insights::Insights;
+use updatehauler::logger::Logger;
+use updatehauler::plugins::levenshtein_distance;
+use updatehauler::plugins::{
     BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, Plugin, PluginActionType, PluginRegistry,
 };
 

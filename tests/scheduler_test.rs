@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use update_hauler::config::Config;
-    use update_hauler::insights::Insights;
-    use update_hauler::logger::Logger;
-    use update_hauler::scheduler::Scheduler;
+    use updatehauler::config::Config;
+    use updatehauler::insights::Insights;
+    use updatehauler::logger::Logger;
+    use updatehauler::scheduler::Scheduler;
 
     #[test]
     fn test_pmset_time_format() {

@@ -9,12 +9,12 @@ use std::process::{Command, ExitCode, Stdio};
 use std::sync::mpsc;
 use std::thread;
 
-use update_hauler::config::Config;
-use update_hauler::insights::Insights;
-use update_hauler::logger::Logger;
-use update_hauler::scheduler::Scheduler;
-use update_hauler::self_install::SelfInstaller;
-use update_hauler::{
+use updatehauler::config::Config;
+use updatehauler::insights::Insights;
+use updatehauler::logger::Logger;
+use updatehauler::scheduler::Scheduler;
+use updatehauler::self_install::SelfInstaller;
+use updatehauler::{
     plugins::BrewPlugin, plugins::CargoPlugin, plugins::NvimPlugin, plugins::OsPlugin,
     plugins::PluginActionType, plugins::PluginRegistry, register_plugins,
 };

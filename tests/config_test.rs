@@ -2,7 +2,7 @@
 mod tests {
     use std::path::PathBuf;
     use tempfile::TempDir;
-    use update_hauler::config::Config;
+    use updatehauler::config::Config;
 
     #[test]
     fn test_config_new() {

@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
     use tempfile::TempDir;
-    use update_hauler::config::Config;
-    use update_hauler::insights::Insights;
-    use update_hauler::logger::Logger;
-    use update_hauler::package_manager::PackageManager;
+    use updatehauler::config::Config;
+    use updatehauler::insights::Insights;
+    use updatehauler::logger::Logger;
+    use updatehauler::package_manager::PackageManager;
 
     #[test]
     fn test_package_manager_creation() {

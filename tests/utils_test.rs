@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use update_hauler::utils;
+    use updatehauler::utils;
 
     #[test]
     fn test_run_cmd_echo() {

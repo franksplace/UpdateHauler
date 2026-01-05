@@ -1,5 +1,5 @@
 [package]
-name = "update_hauler"
+name = "updatehauler"
 version = "0.1.0"
 edition = "2021"
 description = "System package update manager for macOS and Linux"
@@ -12,7 +12,7 @@ name = "updatehauler"
 path = "src/main.rs"
 
 [lib]
-name = "update_hauler"
+name = "updatehauler"
 path = "src/lib.rs"
 
 [dependencies]

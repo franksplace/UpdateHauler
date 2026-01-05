@@ -2,9 +2,9 @@
 mod tests {
     use std::env;
     use std::fs;
-    use update_hauler::config::Config;
-    use update_hauler::insights::Insights;
-    use update_hauler::self_install::SelfInstaller;
+    use updatehauler::config::Config;
+    use updatehauler::insights::Insights;
+    use updatehauler::self_install::SelfInstaller;
 
     #[test]
     fn test_installer_creation() {
