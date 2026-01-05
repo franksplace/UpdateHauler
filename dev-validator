@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+rCMD() {
+  [[ -z "$1" ]] && return
+
+  local cmd=($*)
+
+  echo "#########################"
+  echo "# Running ${cmd[*]}"
+  echo "#########################"
+
+  local CMD_PID='' subline='' line=''
+
+  {
+    "${cmd[@]}" 2>&1 &
+    CMD_PID=$!
+    wait $CMD_PID || RET_VAR=$?
+  } > >(while IFS= read -r line; do
+    while IFS= read -r subline; do
+      echo -e "$subline"
+    done <<<"$line"
+  done)
+
+}
+
+rCMD cargo clean
+rCMD cargo fmt
+rCMD cargo test
+rCMD cargo clippy
+rCMD cargo build --release
+rCMD ./test_release.sh
+rCMD ./test_completions.sh
