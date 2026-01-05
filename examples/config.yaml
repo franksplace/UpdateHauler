@@ -28,6 +28,9 @@ max_log_lines: 10000
 # Installation directory (default: ~/.local/bin)
 # installdir: ~/.local/bin
 
+# Completion files directory (default: ~/.local/share)
+# completionsdir: ~/.local/share
+
 # Custom save file locations
 # brew_save_file: ~/.config/brew/Darwin-Brewfile
 # cargo_save_file: ~/.config/cargo/Darwin-arm64-cargo-backup.json

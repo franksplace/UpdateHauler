@@ -34,7 +34,7 @@ echo -e "${GREEN}✓${NC} Completions installed successfully"
 echo ""
 
 # Check bash completion file
-BASH_COMPLETION="$TEST_DIR/.local/bin/completions/bash/updatehauler.bash"
+BASH_COMPLETION="$TEST_DIR/.local/share/bash-completion/completions/updatehauler.bash"
 if [ -f "$BASH_COMPLETION" ]; then
 	echo -e "${GREEN}✓${NC} Bash completion file created at $BASH_COMPLETION"
 
@@ -56,12 +56,12 @@ fi
 echo ""
 
 # Check zsh completion file
-ZSH_COMPLETION="$TEST_DIR/.local/bin/completions/zsh/updatehauler.zsh"
+ZSH_COMPLETION="$TEST_DIR/.local/share/zsh/completions/_updatehauler"
 if [ -f "$ZSH_COMPLETION" ]; then
 	echo -e "${GREEN}✓${NC} Zsh completion file created at $ZSH_COMPLETION"
 
 	# Check zsh completion contains expected content
-	if grep -q "#compdef updatehauler" "$ZSH_COMPLETION" &&
+	if grep -q "#compdef _updatehauler" "$ZSH_COMPLETION" &&
 		grep -q "brew" "$ZSH_COMPLETION" &&
 		grep -q "cargo" "$ZSH_COMPLETION" &&
 		grep -q "nvim" "$ZSH_COMPLETION" &&

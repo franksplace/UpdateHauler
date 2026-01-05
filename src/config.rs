@@ -15,6 +15,7 @@ pub struct ConfigFile {
     pub installdir: Option<String>,
     pub brew_save_file: Option<String>,
     pub cargo_save_file: Option<String>,
+    pub completionsdir: Option<String>,
     pub schedule: Option<ScheduleConfig>,
     pub plugins: Option<PluginConfig>,
 }
@@ -44,6 +45,7 @@ pub struct Config {
     pub cargo_save_dir: PathBuf,
     #[allow(dead_code)]
     pub log_save_dir: PathBuf,
+    pub completions_dir: PathBuf,
     pub max_log_lines: usize,
     pub sched_minute: String,
     pub sched_hour: String,
@@ -72,6 +74,7 @@ impl Config {
             brew_save_dir: home_path.join(".config/brew"),
             cargo_save_dir: home_path.join(".config/cargo"),
             log_save_dir: home_path.join(".local"),
+            completions_dir: home_path.join(".local/share"),
             max_log_lines: 10000,
             sched_minute: "0".to_string(),
             sched_hour: "2".to_string(),
@@ -138,6 +141,9 @@ impl Config {
         }
         if let Some(installdir) = config_file_yaml.installdir {
             config.app_install_dir = PathBuf::from(installdir);
+        }
+        if let Some(completionsdir) = config_file_yaml.completionsdir {
+            config.completions_dir = PathBuf::from(completionsdir);
         }
         if let Some(brew_save_file) = config_file_yaml.brew_save_file {
             config.brew_file = PathBuf::from(brew_save_file);

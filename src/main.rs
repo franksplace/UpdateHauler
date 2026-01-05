@@ -53,31 +53,32 @@ Schedule Actions:
 Maintenance Actions:
   trim-logfile       Trim logfile to max lines
 
-Self-Installation Actions:
-  install            Install this script to system
-  update             Update this script on the system
-  remove             Remove this script from system
-  install-completions Install shell completions (bash, zsh)
+ Self-Installation Actions:
+   install            Install this script to system
+   update             Update this script on the system
+   remove             Remove this script from system
+   install-completions Install shell completions (bash, zsh)
 
-Plugin Help:
-  <plugin> help      Show detailed help for a specific plugin
+ Plugin Help:
+   <plugin> help      Show detailed help for a specific plugin
 
-Default Actions (when no actions specified):
-  Controlled by YAML config or: os, brew, cargo, brew-save, cargo-save, trim-logfile
+ Default Actions (when no actions specified):
+   Controlled by YAML config or: os, brew, cargo, brew-save, cargo-save, trim-logfile
 
-Examples:
-  updatehauler                       # Run all default actions
-  updatehauler os                    # Update OS packages only
-  updatehauler brew brew-save        # Update and save brew packages
-  updatehauler nvim                  # Update Neovim plugins
-  updatehauler --debug               # Run with debug output
-  updatehauler --no-datetime         # Run without timestamps
-  updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
-  updatehauler schedule enable       # Enable daily updates at 2 AM
-  updatehauler --run "echo hello"    # Run arbitrary command
-  updatehauler brew help            # Show detailed help for brew plugin
-  updatehauler install-completions  # Install shell completions
-"#,
+ Examples:
+   updatehauler                       # Run all default actions
+   updatehauler os                    # Update OS packages only
+   updatehauler brew brew-save        # Update and save brew packages
+   updatehauler nvim                  # Update Neovim plugins
+   updatehauler --debug               # Run with debug output
+   updatehauler --no-datetime         # Run without timestamps
+   updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
+   updatehauler schedule enable       # Enable daily updates at 2 AM
+   updatehauler --run "echo hello"    # Run arbitrary command
+   updatehauler brew help            # Show detailed help for brew plugin
+   updatehauler install-completions  # Install shell completions
+   updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
+ "#,
     );
 
     Box::leak(help.into_boxed_str())
@@ -228,6 +229,13 @@ struct Args {
     )]
     cargo_save_file: Option<String>,
 
+    #[arg(
+        long,
+        value_name = "DIR",
+        help = "Completion install directory (default: ~/.local/share/bash-completion/completions for bash, ~/.local/share/zsh/completions for zsh)"
+    )]
+    completionsdir: Option<String>,
+
     #[arg(long, value_name = "MIN", help = "Schedule minute (default: 0)")]
     sched_minute: Option<String>,
 
@@ -293,6 +301,9 @@ fn main() -> Result<ExitCode> {
     }
     if let Some(install_dir) = args.installdir {
         config.app_install_dir = PathBuf::from(install_dir);
+    }
+    if let Some(completions_dir) = args.completionsdir {
+        config.completions_dir = PathBuf::from(completions_dir);
     }
     if let Some(sched_minute) = args.sched_minute {
         config.sched_minute = sched_minute;
