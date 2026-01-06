@@ -159,21 +159,22 @@ _{app_name}() {{
     local commands="brew brew-save brew-restore cargo cargo-save cargo-restore nvim nvim-save nvim-restore os schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
+    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --run --help --version"
 
     cur="${{COMP_WORDS[COMP_CWORD]}}"
     prev="${{COMP_WORDS[COMP_CWORD-1]}}"
     words=("${{COMP_WORDS[@]}}")
     cword=$COMP_CWORD
 
+    # If current word starts with -, show flags
+    if [[ $cur == -* ]]; then
+        COMPREPLY=($(compgen -W "$flags" -- "$cur"))
+        return 0
+    fi
+
     case "$cword" in
         1)
-            if [[ $prev == "schedule" ]]; then
-                COMPREPLY=($(compgen -W "$schedule_commands" -- "$cur"))
-            elif [[ $prev == "install-completions" ]]; then
-                COMPREPLY=($(compgen -W "$shell_types" -- "$cur"))
-            else
-                COMPREPLY=($(compgen -W "$commands" -- "$cur"))
-            fi
+            COMPREPLY=($(compgen -W "$commands" -- "$cur"))
             ;;
         *)
             if [[ $prev == "schedule" ]]; then
@@ -228,6 +229,34 @@ _{app_name}() {{
         'powershell:Generate PowerShell completions'
         'elvish:Generate elvish completions'
     )
+
+    _arguments \
+        '--debug[Enable debug output]' \
+        '--no-debug[Disable debug output (default)]' \
+        '--datetime[Enable ISO8601 with microseconds (default)]' \
+        '--no-datetime[Disable ISO8601 with microseconds]' \
+        '--header[Enable header output (default)]' \
+        '--no-header[Disable header output]' \
+        '--color[Enable color output (default)]' \
+        '--no-color[Disable color output]' \
+        '--logfile-only[Enable output to only logfile]' \
+        '--dry-run[Dry-run mode - show what would be done without making changes]' \
+        '--logfile+[Logfile to use]:FILE:_files' \
+        '--max-log-lines+[Max lines for logfile]:N:_numbers' \
+        '--installdir+[Location to install this script]:DIR:_directories' \
+        '--brew-save-file+[Brew save file location]:FILE:_files' \
+        '--cargo-save-file+[Cargo save file location]:FILE:_files' \
+        '--completionsdir+[Completion install directory]:DIR:_directories' \
+        '--sched-minute+[Schedule minute]:MIN:_numbers' \
+        '--sched-hour+[Schedule hour]:HOUR:_numbers' \
+        '--sched-day-of-month+[Schedule day of month]:DAY:_numbers' \
+        '--sched-month+[Schedule month]:MONTH:_numbers' \
+        '--sched-day-of-week+[Schedule day of week]:DAY:_numbers' \
+        '--config-file+[YAML configuration file path]:FILE:_files' \
+        '*--run+[Run arbitrary command]:CMD:_cmdstring' \
+        '(-h --help)'{{-h,--help}}'[Print help]' \
+        '(-V --version)'{{-V,--version}}'[Print version]' \
+        '*:: :->action_args'
 
     if (( CURRENT == 1 )); then
         _describe -t commands 'actions' commands
