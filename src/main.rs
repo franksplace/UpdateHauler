@@ -149,6 +149,48 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
     registry
 }
 
+fn generate_custom_bash_completion(config: &Config) -> String {
+    format!(
+        r#"#!/usr/bin/env bash
+# Bash completion for {app_name}
+
+_{app_name}() {{
+    local cur prev words cword
+    local commands="brew brew-save brew-restore cargo cargo-save cargo-restore nvim nvim-save nvim-restore os schedule install update remove install-completions trim-logfile"
+    local schedule_commands="enable disable check"
+    local shell_types="bash zsh fish powershell elvish"
+
+    cur="${{COMP_WORDS[COMP_CWORD]}}"
+    prev="${{COMP_WORDS[COMP_CWORD-1]}}"
+    words=("${{COMP_WORDS[@]}}")
+    cword=$COMP_CWORD
+
+    case "$cword" in
+        1)
+            if [[ $prev == "schedule" ]]; then
+                COMPREPLY=($(compgen -W "$schedule_commands" -- "$cur"))
+            elif [[ $prev == "install-completions" ]]; then
+                COMPREPLY=($(compgen -W "$shell_types" -- "$cur"))
+            else
+                COMPREPLY=($(compgen -W "$commands" -- "$cur"))
+            fi
+            ;;
+        *)
+            if [[ $prev == "schedule" ]]; then
+                COMPREPLY=($(compgen -W "$schedule_commands" -- "$cur"))
+            elif [[ $prev == "install-completions" ]]; then
+                COMPREPLY=($(compgen -W "$shell_types" -- "$cur"))
+            fi
+            ;;
+    esac
+}}
+
+complete -F _{app_name} {app_name}
+"#,
+        app_name = config.app_name
+    )
+}
+
 fn generate_custom_zsh_completion(config: &Config) -> String {
     format!(
         r#"#compdef {app_name}
@@ -259,6 +301,10 @@ fn install_completions(config: &Config, shells: &[&str]) -> Result<()> {
             let completion_content = generate_custom_zsh_completion(config);
             fs::write(&completion_path, completion_content)
                 .context("Failed to write zsh completion")?;
+        } else if shell == &"bash" {
+            let completion_content = generate_custom_bash_completion(config);
+            fs::write(&completion_path, completion_content)
+                .context("Failed to write bash completion")?;
         } else {
             let mut buf = Vec::new();
             generate(shell_enum, &mut cmd, &config.app_name, &mut buf);
