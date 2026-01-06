@@ -73,7 +73,7 @@ print_section "5. Testing --version"
 
 ./target/release/updatehauler --version >/tmp/version_output.txt
 if grep -q "updatehauler" /tmp/version_output.txt &&
-	grep -q "0.1.0" /tmp/version_output.txt; then
+	grep -q "0.2.0" /tmp/version_output.txt; then
 	print_result "--version command"
 else
 	echo "Error: --version output invalid"
@@ -104,9 +104,10 @@ fi
 
 print_section "8. Testing Invalid Action Error Handling"
 
-./target/release/updatehauler invalid-action >/tmp/invalid_output.txt 2>&1
-if grep -q "Invalid action" /tmp/invalid_output.txt &&
-	grep -q "Run 'updatehauler --help'" /tmp/invalid_output.txt; then
+./target/release/updatehauler invalid-action >/tmp/invalid_output.txt 2>&1 || true
+if grep -q "error: invalid value" /tmp/invalid_output.txt &&
+	grep -q '\[ACTION\]' /tmp/invalid_output.txt &&
+	grep -q "For more information, try '--help'" /tmp/invalid_output.txt; then
 	print_result "Invalid action error handling"
 else
 	echo "Error: Invalid action error handling failed"

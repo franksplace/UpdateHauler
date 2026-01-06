@@ -9,7 +9,7 @@ use std::process::{Command, ExitCode, Stdio};
 use std::sync::mpsc;
 use std::thread;
 
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use updatehauler::config::Config;
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
@@ -584,10 +584,10 @@ fn main() -> Result<ExitCode> {
 
     let mut logger = Logger::new(&config);
 
-    if let Some(run_cmd) = args.run {
-        if !run_cmd.is_empty() {
-            return execute_run_command(&run_cmd, &mut logger, &config);
-        }
+    if let Some(run_cmd) = args.run
+        && !run_cmd.is_empty()
+    {
+        return execute_run_command(&run_cmd, &mut logger, &config);
     }
 
     let mut actions = args.actions;
@@ -603,7 +603,10 @@ fn main() -> Result<ExitCode> {
                 println!("{}", build_plugin_help(first));
                 return Ok(ExitCode::SUCCESS);
             } else {
-                eprintln!("Error: Unknown plugin '{}'\n\nAvailable plugins: brew, cargo, nvim, os\nRun 'updatehauler --help' for more information.", first);
+                eprintln!(
+                    "Error: Unknown plugin '{}'\n\nAvailable plugins: brew, cargo, nvim, os\nRun 'updatehauler --help' for more information.",
+                    first
+                );
                 return Ok(ExitCode::FAILURE);
             }
         }

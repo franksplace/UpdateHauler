@@ -89,10 +89,10 @@ impl Logger {
     fn write_to_log(&self, output: &str) -> Result<()> {
         let log_path = &self.config.log;
 
-        if !log_path.exists() {
-            if let Some(parent) = log_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
+        if !log_path.exists()
+            && let Some(parent) = log_path.parent()
+        {
+            std::fs::create_dir_all(parent)?;
         }
 
         let mut file = OpenOptions::new()

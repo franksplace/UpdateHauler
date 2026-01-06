@@ -22,7 +22,7 @@ use crate::logger::Logger;
 /// Usage: register_plugins!(registry, BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin);
 #[macro_export]
 macro_rules! register_plugins {
-    ($registry:expr, $($plugin:expr),* $(,)?) => {
+    ($registry:expr_2021, $($plugin:expr_2021),* $(,)?) => {
         $(
             $registry.register(Box::new($plugin));
         )*
@@ -99,7 +99,7 @@ pub trait Plugin: Send + Sync {
     async fn check_available(&self, config: &Config, insights: &Insights) -> bool;
 
     async fn update(&self, config: &Config, insights: &Insights, logger: &mut Logger)
-        -> Result<()>;
+    -> Result<()>;
 
     async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()>;
 
@@ -219,34 +219,27 @@ impl<'a> PluginRegistry<'a> {
                 plugin.update(config, insights, logger).await?;
                 return Ok(());
             }
-        } else if let Some((plugin_name, _)) = action_name.split_once('-') {
-            if let Some(plugin) = self.get_plugin(plugin_name) {
-                if let Some(action_meta) = self.get_action_by_name(action_name) {
-                    match action_meta.action_type {
-                        Some(PluginActionType::Update) => {
-                            plugin.update(config, insights, logger).await?
-                        }
-                        Some(PluginActionType::Save) => {
-                            plugin.save(config, insights, logger).await?
-                        }
-                        Some(PluginActionType::Restore) => {
-                            plugin.restore(config, insights, logger).await?
-                        }
-                        None => {
-                            // Custom action - call handle_custom_action
-                            if plugin
-                                .handle_custom_action(action_name, config, insights, logger)
-                                .await?
-                            {
-                                return Ok(());
-                            } else {
-                                plugin.update(config, insights, logger).await?
-                            }
-                        }
+        } else if let Some((plugin_name, _)) = action_name.split_once('-')
+            && let Some(plugin) = self.get_plugin(plugin_name)
+            && let Some(action_meta) = self.get_action_by_name(action_name)
+        {
+            match action_meta.action_type {
+                Some(PluginActionType::Update) => plugin.update(config, insights, logger).await?,
+                Some(PluginActionType::Save) => plugin.save(config, insights, logger).await?,
+                Some(PluginActionType::Restore) => plugin.restore(config, insights, logger).await?,
+                None => {
+                    // Custom action - call handle_custom_action
+                    if plugin
+                        .handle_custom_action(action_name, config, insights, logger)
+                        .await?
+                    {
+                        return Ok(());
+                    } else {
+                        plugin.update(config, insights, logger).await?
                     }
-                    return Ok(());
                 }
             }
+            return Ok(());
         }
         // Provide helpful suggestions for typos
         let similar = self.find_similar_actions(action_name);
