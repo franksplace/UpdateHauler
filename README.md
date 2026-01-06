@@ -432,10 +432,10 @@ cargo install updatehauler
 
 ### Shell Completions
 
-UpdateHauler includes shell completions for bash and zsh:
+UpdateHauler includes shell completions for bash, zsh, fish, powershell, and elvish with descriptive help:
 
 ```bash
-# Install completions (creates files in ~/.local/bin/completions/)
+# Install completions (creates files in ~/.local/share/)
 updatehauler install-completions bash zsh
 ```
 
@@ -444,20 +444,40 @@ updatehauler install-completions bash zsh
 **For bash:**
 ```bash
 # Add to ~/.bashrc or ~/.bash_profile
-source ~/.local/bin/completions/bash/updatehauler.bash
+source ~/.local/share/bash-completion/completions/updatehauler.bash
 ```
 
 **For zsh:**
 ```bash
 # Add to ~/.zshrc
-fpath=(~/.local/bin/completions/zsh $fpath)
+fpath=(~/.local/share/zsh/completions $fpath)
 autoload -U compinit && compinit
+```
+
+**For fish:**
+```bash
+# Add to ~/.config/fish/completions/
+updatehauler install-completions fish
+```
+
+**For powershell:**
+```bash
+# Add to PowerShell profile
+updatehauler install-completions powershell
+```
+
+**For elvish:**
+```bash
+# Add to elvish rc file
+updatehauler install-completions elvish
 ```
 
 Once enabled, completions will automatically suggest:
 - Plugins: `brew`, `cargo`, `nvim`, `os`
-- Actions: `brew-save`, `brew-restore`, `cargo-save`, etc.
+- Actions: `brew-save`, `brew-restore`, `cargo-save`, etc. with descriptions
 - Commands: `install`, `update`, `remove`, `install-completions`
+- Schedule subcommands: `enable`, `disable`, `check` (after `schedule`)
+- Shell types: `bash`, `zsh`, `fish`, `powershell`, `elvish` (after `install-completions`)
 - Flags: `--help`, `--dry-run`, `--debug`, etc.
 
 ### CI/CD Integration

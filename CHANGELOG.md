@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Hybrid plugin system with dynamic action discovery
 - Per-plugin help system (`updatehauler <plugin> help`)
-- Comprehensive test suite with 47 tests
-- Shell completion support (bash and zsh)
+- Comprehensive test suite with 68 tests
+- Shell completion support (bash, zsh, fish, powershell, elvish) with descriptive help
+- Context-aware completions (schedule subcommands, shell types after parent commands)
 - Code coverage reporting
 - CONTRIBUTING.md guide for contributors
 
@@ -19,11 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved error messages with helpful suggestions
 - Refactored plugin registry for better extensibility
 - Dynamic help text generation from plugin metadata
+- Enhanced shell completions to use clap_complete for better integration
+- Added action validation with PossibleValuesParser
 
 ### Fixed
 - Fixed test_release.sh hanging on restore commands
 - Fixed missing imports in main.rs
 - Fixed duplicate help text sections
+- Fixed shell completion installation paths
 
 ## [0.1.0] - 2026-01-02
 

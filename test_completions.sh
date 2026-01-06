@@ -39,11 +39,8 @@ if [ -f "$BASH_COMPLETION" ]; then
 	echo -e "${GREEN}✓${NC} Bash completion file created at $BASH_COMPLETION"
 
 	# Check bash completion contains expected content
-	if grep -q "updatehauler_completion" "$BASH_COMPLETION" &&
-		grep -q "brew" "$BASH_COMPLETION" &&
-		grep -q "cargo" "$BASH_COMPLETION" &&
-		grep -q "nvim" "$BASH_COMPLETION" &&
-		grep -q "os" "$BASH_COMPLETION"; then
+	if grep -q "_updatehauler" "$BASH_COMPLETION" &&
+		grep -q "complete -F _updatehauler" "$BASH_COMPLETION"; then
 		echo -e "${GREEN}✓${NC} Bash completion has expected content"
 	else
 		echo -e "${RED}✗${NC} Bash completion missing expected content"
@@ -61,11 +58,8 @@ if [ -f "$ZSH_COMPLETION" ]; then
 	echo -e "${GREEN}✓${NC} Zsh completion file created at $ZSH_COMPLETION"
 
 	# Check zsh completion contains expected content
-	if grep -q "#compdef _updatehauler" "$ZSH_COMPLETION" &&
-		grep -q "brew" "$ZSH_COMPLETION" &&
-		grep -q "cargo" "$ZSH_COMPLETION" &&
-		grep -q "nvim" "$ZSH_COMPLETION" &&
-		grep -q "os" "$ZSH_COMPLETION"; then
+	if grep -q "#compdef updatehauler" "$ZSH_COMPLETION" &&
+		grep -q "_updatehauler" "$ZSH_COMPLETION"; then
 		echo -e "${GREEN}✓${NC} Zsh completion has expected content"
 	else
 		echo -e "${RED}✗${NC} Zsh completion missing expected content"

@@ -64,8 +64,8 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        // Should complete but not do anything for invalid actions
-        assert!(output.status.success());
+        // Should fail for invalid actions with clap validation
+        assert!(!output.status.success());
     }
 
     #[test]
@@ -251,12 +251,8 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        assert!(
-            stdout.contains("Error: Unknown plugin") || stderr.contains("Error: Unknown plugin")
-        );
-        assert!(
-            stdout.contains("Available plugins: brew, cargo, nvim, os")
-                || stderr.contains("Available plugins: brew, cargo, nvim, os")
-        );
+        // With clap PossibleValuesParser, error comes from clap validation
+        assert!(stdout.contains("invalid value") || stderr.contains("invalid value"));
+        assert!(stdout.contains("possible values:") || stderr.contains("possible values:"));
     }
 }

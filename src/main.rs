@@ -1,14 +1,15 @@
 use anyhow::{Context, Result};
 use std::env;
 
-use clap::Parser;
-use std::fs::{File, OpenOptions};
+use clap::{CommandFactory, Parser};
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, ExitCode, Stdio};
 use std::sync::mpsc;
 use std::thread;
 
+use clap_complete::{generate, Shell};
 use updatehauler::config::Config;
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
@@ -148,6 +149,140 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
     registry
 }
 
+fn generate_custom_zsh_completion(config: &Config) -> String {
+    format!(
+        r#"#compdef {app_name}
+
+_{app_name}() {{
+    local -a commands=(
+        'brew:Update, upgrade, and clean brew formulas and casks'
+        'brew-save:Save brew bundle to Brewfile'
+        'brew-restore:Restore from brew bundle'
+        'cargo:Upgrade cargo installed packages'
+        'cargo-save:Save cargo packages to backup JSON'
+        'cargo-restore:Restore cargo packages from backup JSON'
+        'nvim:Update Neovim plugins'
+        'nvim-save:Save nvim plugin configuration'
+        'nvim-restore:Restore nvim plugins'
+        'os:Update OS and app-based packages'
+        'schedule:Manage scheduled updates'
+        'install:Install this script to system'
+        'update:Update this script on the system'
+        'remove:Remove this script from system'
+        'install-completions:Install shell completions'
+        'trim-logfile:Trim logfile to max lines'
+    )
+
+    local -a schedule_subcommands=(
+        'enable:Enable scheduled updates (cron on Linux, launchd on macOS)'
+        'disable:Disable scheduled updates'
+        'check:Check current scheduling status'
+    )
+
+    local -a shell_types=(
+        'bash:Generate bash completions'
+        'zsh:Generate zsh completions'
+        'fish:Generate fish completions'
+        'powershell:Generate PowerShell completions'
+        'elvish:Generate elvish completions'
+    )
+
+    if (( CURRENT == 1 )); then
+        _describe -t commands 'actions' commands
+        return
+    fi
+
+    if (( CURRENT > 1 )); then
+        local prev_cmd=$words[CURRENT-1]
+        case $prev_cmd in
+            schedule)
+                _describe -t commands 'schedule subcommands' schedule_subcommands
+                ;;
+            install-completions)
+                _describe -t commands 'shell types' shell_types
+                ;;
+            *)
+                _describe -t commands 'actions' commands
+                ;;
+        esac
+    fi
+}}
+
+_{app_name} "$@"
+"#,
+        app_name = config.app_name
+    )
+}
+
+fn install_completions(config: &Config, shells: &[&str]) -> Result<()> {
+    let mut cmd = Args::command();
+
+    for shell in shells {
+        let shell_enum = match *shell {
+            "bash" => Shell::Bash,
+            "zsh" => Shell::Zsh,
+            "fish" => Shell::Fish,
+            "powershell" => Shell::PowerShell,
+            "elvish" => Shell::Elvish,
+            _ => anyhow::bail!("Unsupported shell: {}", shell),
+        };
+
+        let mut completion_dir = config.completions_dir.clone();
+        match *shell {
+            "bash" => {
+                completion_dir.push("bash-completion");
+                completion_dir.push("completions");
+            }
+            "zsh" => {
+                completion_dir.push("zsh");
+                completion_dir.push("completions");
+            }
+            _ => {
+                completion_dir.push("completions");
+                completion_dir.push(shell);
+            }
+        }
+
+        if !completion_dir.exists() {
+            fs::create_dir_all(&completion_dir).context("Failed to create completion directory")?;
+        }
+
+        let filename = if shell == &"zsh" {
+            format!("_{}", config.app_name)
+        } else {
+            format!("{}.bash", config.app_name)
+        };
+
+        let completion_path = completion_dir.join(filename);
+
+        if shell == &"zsh" {
+            let completion_content = generate_custom_zsh_completion(config);
+            fs::write(&completion_path, completion_content)
+                .context("Failed to write zsh completion")?;
+        } else {
+            let mut buf = Vec::new();
+            generate(shell_enum, &mut cmd, &config.app_name, &mut buf);
+            fs::write(&completion_path, buf).context("Failed to write completion")?;
+        }
+        println!("Installed {} completions to {:?}", shell, completion_path);
+
+        match *shell {
+            "bash" => {
+                println!("Add to ~/.bashrc: source {:?}", completion_path);
+            }
+            "zsh" => {
+                println!(
+                    "Add to ~/.zshrc: fpath=({:?} $fpath)",
+                    completion_path.parent()
+                );
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "updatehauler",
@@ -271,7 +406,37 @@ struct Args {
     )]
     run: Option<Vec<String>>,
 
-    #[arg(value_name = "ACTION", help = "Action to perform")]
+    #[arg(
+        value_name = "ACTION",
+        help = "Action to perform",
+        value_parser = clap::builder::PossibleValuesParser::new([
+            "brew",
+            "brew-save",
+            "brew-restore",
+            "cargo",
+            "cargo-save",
+            "cargo-restore",
+            "nvim",
+            "nvim-save",
+            "nvim-restore",
+            "os",
+            "schedule",
+            "install",
+            "update",
+            "remove",
+            "install-completions",
+            "trim-logfile",
+            "bash",
+            "zsh",
+            "fish",
+            "powershell",
+            "elvish",
+            "enable",
+            "disable",
+            "check",
+            "help",
+        ])
+    )]
     actions: Vec<String>,
 }
 
@@ -380,7 +545,17 @@ fn main() -> Result<ExitCode> {
                     "update" => installer.update()?,
                     "remove" => installer.remove()?,
                     "install-completions" => {
-                        installer.install_completions(&["bash", "zsh"])?;
+                        let shells: Vec<&str> = actions
+                            .iter()
+                            .skip_while(|&a| a != "install-completions")
+                            .skip(1)
+                            .map(|s| s.as_str())
+                            .collect();
+                        if shells.is_empty() {
+                            install_completions(&config, &["bash", "zsh"])?;
+                        } else {
+                            install_completions(&config, &shells.to_vec())?;
+                        }
                         return Ok(ExitCode::SUCCESS);
                     }
                     _ => unreachable!(),
