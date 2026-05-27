@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use duct::cmd;
 use std::path::PathBuf;
 
 use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
@@ -7,6 +6,7 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 use anyhow::Result;
+use duct::cmd;
 use which::which;
 
 pub struct NvimPlugin;
@@ -37,130 +37,23 @@ impl NvimPlugin {
                     description: "Restore nvim plugins".to_string(),
                     action_type: Some(PluginActionType::Restore),
                 },
+                PluginAction {
+                    name: "nvim-list".to_string(),
+                    description: "List installed nvim plugins".to_string(),
+                    action_type: None,
+                },
+                PluginAction {
+                    name: "nvim-clean".to_string(),
+                    description: "Clean unused nvim plugins".to_string(),
+                    action_type: None,
+                },
+                PluginAction {
+                    name: "nvim-health".to_string(),
+                    description: "Check nvim plugin health".to_string(),
+                    action_type: None,
+                },
             ],
         }
-    }
-
-    fn run_cmd(
-        config: &Config,
-        logger: &mut Logger,
-        show_error: bool,
-        command: &str,
-        args: &[&str],
-    ) -> Result<()> {
-        let cmd_str = format!("{} {}", command, args.join(" "));
-
-        let short_cmd = command;
-
-        if config.dry_run {
-            if config.show_header {
-                logger.log(&format!("{} → Start (DRY-RUN)", cmd_str));
-            }
-            logger.log(&format!("Would execute: {}", cmd_str));
-            if config.show_header {
-                logger.log(&format!("{} → Return code 0 (DRY-RUN)", cmd_str));
-            }
-            return Ok(());
-        }
-
-        if config.show_header {
-            logger.log(&format!("{} → Start", cmd_str));
-        }
-
-        use std::io::{BufRead, BufReader};
-        use std::process::{Command, Stdio};
-        use std::sync::mpsc;
-        use std::thread;
-
-        let mut child = Command::new(command)
-            .args(args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| anyhow::anyhow!("Failed to execute {}: {}", cmd_str, e))?;
-
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| anyhow::anyhow!("Failed to capture stdout"))?;
-        let stderr = child
-            .stderr
-            .take()
-            .ok_or_else(|| anyhow::anyhow!("Failed to capture stderr"))?;
-
-        let stdout_reader = BufReader::new(stdout);
-        let stderr_reader = BufReader::new(stderr);
-
-        let (tx, rx) = mpsc::channel();
-
-        let tx_stdout = tx.clone();
-        let tx_stderr = tx.clone();
-
-        let short_cmd1 = short_cmd.to_string();
-        let short_cmd2 = short_cmd.to_string();
-        let show_header = config.show_header;
-
-        let tx_stdout_clone = tx_stdout.clone();
-        let tx_stderr_clone = tx_stderr.clone();
-
-        thread::spawn(move || {
-            let reader = stdout_reader;
-            for line_result in reader.lines() {
-                match line_result {
-                    Ok(line) => {
-                        let formatted = if show_header {
-                            format!("{} → {}", short_cmd1, line)
-                        } else {
-                            line
-                        };
-                        let _ = tx_stdout_clone.send((formatted, false));
-                    }
-                    Err(_) => break,
-                }
-            }
-        });
-
-        thread::spawn(move || {
-            let reader = stderr_reader;
-            for line_result in reader.lines() {
-                match line_result {
-                    Ok(line) => {
-                        let formatted = if show_header {
-                            format!("{} → {}", short_cmd2, line)
-                        } else {
-                            line
-                        };
-                        let _ = tx_stderr_clone.send((formatted, true));
-                    }
-                    Err(_) => break,
-                }
-            }
-        });
-
-        for (line, is_error) in rx {
-            if is_error {
-                logger.error(&line);
-            } else {
-                logger.log(&line);
-            }
-        }
-
-        drop(tx);
-        drop(tx_stdout);
-        drop(tx_stderr);
-
-        let exit_status = child.wait()?;
-        let exit_code = exit_status.code().unwrap_or(1);
-
-        if config.show_header {
-            if show_error && exit_code != 0 {
-                logger.error(&format!("{} → Return code {}", cmd_str, exit_code));
-            } else {
-                logger.log(&format!("{} → Return code {}", cmd_str, exit_code));
-            }
-        }
-
-        Ok(())
     }
 
     fn get_nvim_config_path() -> Option<PathBuf> {
@@ -186,7 +79,7 @@ impl NvimPlugin {
     }
 
     fn update_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
-        Self::run_cmd(
+        super::run_cmd(
             config,
             logger,
             false,
@@ -196,7 +89,7 @@ impl NvimPlugin {
     }
 
     fn update_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
-        Self::run_cmd(
+        super::run_cmd(
             config,
             logger,
             false,
@@ -206,7 +99,7 @@ impl NvimPlugin {
     }
 
     fn update_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
-        Self::run_cmd(
+        super::run_cmd(
             config,
             logger,
             false,
@@ -231,18 +124,33 @@ impl NvimPlugin {
     }
 
     fn restore_lazy_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
-        let lazy_install_cmd = "nvim --headless '+Lazy! sync' +qa";
-        Self::run_cmd(config, logger, false, "nvim", &["-c", lazy_install_cmd])
+        super::run_cmd(
+            config,
+            logger,
+            false,
+            "nvim",
+            &["--headless", "-c", "Lazy! sync", "+qa"],
+        )
     }
 
     fn restore_packer_nvim(config: &Config, logger: &mut Logger) -> Result<()> {
-        let packer_install_cmd = "nvim --headless '+PackerInstall' +qa";
-        Self::run_cmd(config, logger, false, "nvim", &["-c", packer_install_cmd])
+        super::run_cmd(
+            config,
+            logger,
+            false,
+            "nvim",
+            &["--headless", "-c", "PackerInstall", "+qa"],
+        )
     }
 
     fn restore_vim_plug(config: &Config, logger: &mut Logger) -> Result<()> {
-        let plug_install_cmd = "nvim --headless '+PlugInstall --sync' +qa";
-        Self::run_cmd(config, logger, false, "nvim", &["-c", plug_install_cmd])
+        super::run_cmd(
+            config,
+            logger,
+            false,
+            "nvim",
+            &["--headless", "-c", "PlugInstall --sync", "+qa"],
+        )
     }
 }
 
@@ -258,6 +166,117 @@ impl Plugin for NvimPlugin {
 
     async fn check_available(&self, _config: &Config, _insights: &Insights) -> bool {
         which("nvim").is_ok() && Self::detect_plugin_manager().is_some()
+    }
+
+    async fn handle_custom_action(
+        &self,
+        action_name: &str,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<bool> {
+        match action_name {
+            "nvim-list" => {
+                logger
+                    .log("Installed nvim plugins are listed in your plugin manager configuration");
+                Ok(true)
+            }
+            "nvim-clean" => {
+                let plugin_manager = Self::detect_plugin_manager();
+                match plugin_manager.as_deref() {
+                    Some("lazy.nvim") => {
+                        super::run_cmd(
+                            config,
+                            logger,
+                            false,
+                            "nvim",
+                            &["--headless", "-c", "Lazy! clean", "+qa"],
+                        )?;
+                    }
+                    Some("packer.nvim") => {
+                        super::run_cmd(
+                            config,
+                            logger,
+                            false,
+                            "nvim",
+                            &["--headless", "-c", "PackerClean", "+qa"],
+                        )?;
+                    }
+                    Some("vim-plug") => {
+                        super::run_cmd(
+                            config,
+                            logger,
+                            false,
+                            "nvim",
+                            &["--headless", "-c", "PlugClean!", "+qa"],
+                        )?;
+                    }
+                    _ => {
+                        logger.log("No supported nvim plugin manager detected");
+                    }
+                }
+                Ok(true)
+            }
+            "nvim-health" => {
+                let lua_script = r#"
+local results = {}
+local h = vim.health
+
+local function hook(name)
+  local orig = h[name]
+  h[name] = function(msg, details)
+    if msg then
+      table.insert(results, "[" .. name:upper() .. "] " .. msg .. (details and (" -- " .. details) or ""))
+    end
+    if orig then return orig(msg, details) end
+  end
+end
+
+hook("start")
+hook("ok")
+hook("warn")
+hook("error")
+
+vim.cmd("checkhealth")
+
+for _, r in ipairs(results) do
+  print(r)
+end
+"#;
+
+                let script_path = std::env::temp_dir().join("updatehauler_nvim_health.lua");
+                std::fs::write(&script_path, lua_script)?;
+
+                let output = cmd("nvim", &["--headless", "-c", &format!("luafile {}", script_path.display()), "-c", "qa"])
+                    .stdout_capture()
+                    .stderr_capture()
+                    .run();
+
+                let _ = std::fs::remove_file(&script_path);
+
+                match output {
+                    Ok(output) => {
+                        let combined = format!(
+                            "{}{}",
+                            String::from_utf8_lossy(&output.stdout),
+                            String::from_utf8_lossy(&output.stderr),
+                        );
+                        for line in combined.lines() {
+                            let trimmed = line.trim();
+                            if !trimmed.is_empty() && !trimmed.contains("checkhealth:") {
+                                logger.log(trimmed);
+                            }
+                        }
+                        Ok(true)
+                    }
+                    Err(e) => {
+                        logger.error(&format!("Health check failed: {}", e));
+                        Ok(true)
+                    }
+                }
+            }
+            _ => Ok(false),
+        }
     }
 
     async fn update(

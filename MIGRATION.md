@@ -4,9 +4,10 @@
 
 ### 1. Package Manager Module Status
 
-**Status:** Deprecated but retained for backwards compatibility
+**Status:** Removed
 
-- `src/package_manager.rs` - Still exists but is **NO LONGER USED** in main.rs
+- `src/package_manager.rs` - Has been removed; all functionality migrated to plugin framework
+- `src/utils.rs` - Has been removed; all functionality migrated
 - All functionality has been migrated to the plugin framework
 - Previously used for: `brew-restore` and `cargo-restore`
 - Now using: Plugin-based approach with `BrewPlugin` and `CargoPlugin`
@@ -23,6 +24,8 @@
 - `src/plugins/cargo.rs` - Cargo crates management
 - `src/plugins/nvim.rs` - Neovim plugins management
 - `src/plugins/os.rs` - OS package management
+- `src/plugins/npm.rs` - npm package management
+- `src/plugins/pip.rs` - pip package management
 
 **Plugin Trait Methods:**
 - `name()` - Returns plugin identifier
@@ -42,7 +45,10 @@
 - `plugins.brew` - Enable/disable brew plugin
 - `plugins.cargo` - Enable/disable cargo plugin
 - `plugins.nvim` - Enable/disable nvim plugin
+- `plugins.npm` - Enable/disable npm plugin
 - `plugins.os` - Enable/disable os plugin
+- `plugins.pip` - Enable/disable pip plugin
+- `notify` - Enable desktop notifications
 - All schedule options moved to YAML
 - All logging options moved to YAML
 - All path options moved to YAML
@@ -68,17 +74,9 @@
 
 **Created:** Comprehensive plugin tests
 
-**New Test File:** `tests/plugins_test.rs`
+**New Test Files:** `tests/plugins_test.rs`, `tests/config_test.rs`, `tests/scheduler_test.rs`, `tests/plugin_registry_test.rs`, `tests/integration_test.rs`, `tests/insights_test.rs`, `tests/logger_test.rs`, `tests/schedule_args_test.rs`, `tests/self_install_test.rs`
 
-**Tests Added (14 total):**
-- Plugin registry creation and management
-- Individual plugin names
-- Plugin availability checks
-- Dry-run mode
-- Save/restore with missing files
-- Nvim plugin operations
-
-**All Test Results:** 52 tests pass, 0 failures
+**All Test Results:** 80 tests pass, 0 failures
 
 ### 6. Build Quality
 
@@ -86,7 +84,7 @@
 
 **Results:**
 - ✅ `cargo build --release` - Success
-- ✅ `cargo test` - All 52 tests pass
+- ✅ `cargo test` - All 80 tests pass
 - ✅ `cargo clippy` - No warnings
 - ✅ `./test_release.sh` - All 22 test sections pass
 

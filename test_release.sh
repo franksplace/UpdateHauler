@@ -73,7 +73,7 @@ print_section "5. Testing --version"
 
 ./target/release/updatehauler --version >/tmp/version_output.txt
 if grep -q "updatehauler" /tmp/version_output.txt &&
-	grep -q "0.2.0" /tmp/version_output.txt; then
+	grep -q "0.3.0" /tmp/version_output.txt; then
 	print_result "--version command"
 else
 	echo "Error: --version output invalid"

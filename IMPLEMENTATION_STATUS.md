@@ -71,7 +71,7 @@
 ### Build Status
 - ✅ Debug build: PASSED
 - ✅ Release build: PASSED
-- ✅ All tests: 47/47 PASSED
+- ✅ All tests: 80/80 PASSED
 - ✅ Clippy: CLEAN (no warnings)
 
 ### Verified Functionality
@@ -138,29 +138,43 @@ User Input → Action Detection
 
 ## Phase 4: Future Enhancements
 
-### Planned Features
-1. **Custom Action Handlers**
-    - Add optional `handle_custom_action()` method to Plugin trait
-    - Allow plugins to define custom actions beyond update/save/restore
-    - Enable actions like `brew-list`, `brew-outdated`, etc.
+### ✅ Phase 4: Enhancements (Complete)
 
-2. **Enhanced Error Messages**
-    - Suggest similar action names on typos
-    - Show all valid actions for a plugin on error
-    - Better formatting and styling
+1. **Custom Action Handlers** ✅
+    - `handle_custom_action()` method on Plugin trait implemented
+    - Plugins define custom actions beyond update/save/restore
+    - Actions like `brew-list`, `brew-outdated`, `nvim-health`, `cargo-list`, etc.
 
-3. **Plugin System Improvements**
-    - Action completion for shell
-    - Dynamic plugin loading from external files (see Phase 5)
-    - Plugin configuration validation
-    - Plugin dependency management
-    - Plugin version compatibility checking
+2. **Enhanced Error Messages** ✅
+    - Similar action name suggestions on typos (using strsim levenshtein)
+    - All valid actions shown for plugin on error
+    - Dynamic plugin listing in error messages
 
-4. **Testing Improvements**
-    - Add unit tests for help generation
-    - Add tests for per-plugin help
-    - Test edge cases in action execution
-    - Integration tests for full workflows
+3. **Plugin System Improvements** ✅
+    - Action completion for shell (bash, zsh, fish, powershell, elvish)
+    - Per-plugin help (`updatehauler brew help`)
+    - Plugin enable/disable via CLI flags (`--enable-plugin`, `--disable-plugin`)
+    - Desktop notifications on completion (`--notify`)
+    - Run summary with success/failure counts
+    - `run` action with `--cmd` flag (replaces old `--run`) respects `--dry-run`
+    - `--list-plugins` flag to show available/enabled plugins
+
+4. **Testing Improvements** ✅
+    - Unit tests for help generation
+    - Tests for per-plugin help
+    - Edge cases in action execution
+    - Tests for schedule validation, xml_escape
+    - Integration tests for full workflows (80 tests)
+
+5. **New Plugins** ✅
+    - npm plugin with update, save, restore
+    - pip plugin with update, save, restore
+
+### Phase 5: Future Enhancements
+1. Dynamic plugin loading from external files
+2. Plugin configuration validation
+3. Plugin dependency management
+4. Plugin version compatibility checking
 
 ## Phase 5: Dynamic Plugin Loading (Optional Future Enhancement)
 

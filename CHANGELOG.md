@@ -10,7 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Hybrid plugin system with dynamic action discovery
 - Per-plugin help system (`updatehauler <plugin> help`)
-- Comprehensive test suite with 68 tests
+- Custom actions: brew-list, brew-outdated, brew-upgrade-pinned, cargo-list, cargo-outdated, nvim-list, nvim-clean, nvim-health
+- New plugins: npm (update/save/restore), pip (update/save/restore)
+- Plugin enable/disable via CLI flags (`--enable-plugin`, `--disable-plugin`)
+- Desktop notifications on completion (`--notify`)
+- Run summary with success/failure counts at end of execution
+- Comprehensive test suite with 80 tests
 - Shell completion support (bash, zsh, fish, powershell, elvish) with descriptive help
 - Context-aware completions (schedule subcommands, shell types after parent commands)
 - Code coverage reporting
@@ -20,14 +25,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved error messages with helpful suggestions
 - Refactored plugin registry for better extensibility
 - Dynamic help text generation from plugin metadata
+- Dynamic plugin listing in error messages
 - Enhanced shell completions to use clap_complete for better integration
 - Added action validation with PossibleValuesParser
+- `--run` command now respects `--dry-run` mode
+- Schedule values now accept ASCII letters (MON,WED,FRI style day names)
+- Crontab entry format fixed (removed stray semicolon)
+- Removed unused sys-info dependency
+- Removed dead code: package_manager.rs, utils.rs, log_save_dir field
+- Moved tempfile to dev-dependencies
 
 ### Fixed
 - Fixed test_release.sh hanging on restore commands
 - Fixed missing imports in main.rs
 - Fixed duplicate help text sections
 - Fixed shell completion installation paths
+- Fixed nvim restore commands (incorrect -c arg wrapping)
+- Fixed test_release.sh version check (0.2.0 → 0.3.0)
 
 ## [0.1.0] - 2026-01-02
 
@@ -70,11 +84,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release test suite (test_release.sh)
 - CI/CD workflows for GitHub Actions
 
-## [0.2.0] - Upcoming
-
-### Planned
-- Custom action handlers for plugins
-- Windows support
-- Additional package manager plugins (npm, pip, etc.)
-- Enhanced error reporting with suggestions
-- Automated releases to crates.io
+## [0.2.0] - Upcoming (merged into 0.3.0)

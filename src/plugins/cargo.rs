@@ -9,90 +9,6 @@ use anyhow::Result;
 
 pub struct CargoPlugin;
 
-impl CargoPlugin {
-    fn run_cmd(
-        config: &Config,
-        logger: &mut Logger,
-        show_error: bool,
-        command: &str,
-        args: &[&str],
-    ) -> Result<()> {
-        let cmd_str = format!("{} {}", command, args.join(" "));
-
-        let short_cmd = command;
-
-        if config.dry_run {
-            if config.show_header {
-                logger.log(&format!("{} → Start (DRY-RUN)", cmd_str));
-            }
-            logger.log(&format!("Would execute: {}", cmd_str));
-            if config.show_header {
-                logger.log(&format!("{} → Return code 0 (DRY-RUN)", cmd_str));
-            }
-            return Ok(());
-        }
-
-        if config.show_header {
-            logger.log(&format!("{} → Start", cmd_str));
-        }
-
-        let result = cmd(command, args).stdout_capture().stderr_capture().run();
-
-        match result {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-
-                for line in stdout.lines() {
-                    let formatted = if config.show_header {
-                        format!("{} → {}", short_cmd, line)
-                    } else {
-                        line.to_string()
-                    };
-                    logger.log(&formatted);
-                }
-
-                for line in stderr.lines() {
-                    let formatted = if config.show_header {
-                        format!("{} → {}", short_cmd, line)
-                    } else {
-                        line.to_string()
-                    };
-                    logger.log(&formatted);
-                }
-
-                if config.show_header {
-                    if show_error && !output.status.success() {
-                        logger.error(&format!(
-                            "{} → Return code {}",
-                            cmd_str,
-                            output.status.code().unwrap_or(1)
-                        ));
-                    } else {
-                        logger.log(&format!(
-                            "{} → Return code {}",
-                            cmd_str,
-                            output.status.code().unwrap_or(0)
-                        ));
-                    }
-                }
-
-                Ok(())
-            }
-            Err(e) => {
-                if config.show_header {
-                    if show_error {
-                        logger.error(&format!("{} → Error: {}", cmd_str, e));
-                    } else {
-                        logger.log(&format!("{} → Return code {}", cmd_str, 1));
-                    }
-                }
-                Ok(())
-            }
-        }
-    }
-}
-
 #[async_trait]
 impl Plugin for CargoPlugin {
     fn name(&self) -> &str {
@@ -123,7 +39,38 @@ impl Plugin for CargoPlugin {
                         .to_string(),
                     action_type: Some(PluginActionType::Restore),
                 },
+                PluginAction {
+                    name: "cargo-list".to_string(),
+                    description: "List all installed cargo packages".to_string(),
+                    action_type: None,
+                },
+                PluginAction {
+                    name: "cargo-outdated".to_string(),
+                    description: "Show outdated cargo packages (requires cargo-outdated)"
+                        .to_string(),
+                    action_type: None,
+                },
             ],
+        }
+    }
+
+    async fn handle_custom_action(
+        &self,
+        action_name: &str,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<bool> {
+        match action_name {
+            "cargo-list" => {
+                super::run_cmd(config, logger, true, "cargo", &["install", "--list"])?;
+                Ok(true)
+            }
+            "cargo-outdated" => {
+                super::run_cmd(config, logger, false, "cargo", &["outdated"])?;
+                Ok(true)
+            }
+            _ => Ok(false),
         }
     }
 
@@ -145,7 +92,7 @@ impl Plugin for CargoPlugin {
             .stdout_null()
             .run();
 
-        Self::run_cmd(config, logger, true, "cargo", &["install-update", "-a"])?;
+        super::run_cmd(config, logger, true, "cargo", &["install-update", "-a"])?;
 
         Ok(())
     }
@@ -165,7 +112,7 @@ impl Plugin for CargoPlugin {
 
         logger.log(&format!("Generating cargo's {} save file", cargo_file));
 
-        Self::run_cmd(
+        super::run_cmd(
             config,
             logger,
             true,
@@ -200,7 +147,7 @@ impl Plugin for CargoPlugin {
 
         let _ = cmd("cargo", &["restore", "--version"]).stdout_null().run();
 
-        Self::run_cmd(
+        super::run_cmd(
             config,
             logger,
             true,

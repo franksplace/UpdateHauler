@@ -19,6 +19,9 @@ use_log: false
 # Dry-run mode - show what would be done without making changes
 dry_run: false
 
+# Send desktop notification when updates complete
+# notify: true
+
 # Maximum lines for logfile before rotation
 max_log_lines: 10000
 
@@ -57,5 +60,9 @@ plugins:
   cargo: true
   # Enable or disable Neovim plugin
   nvim: false
+  # Enable or disable npm plugin
+  npm: true
   # Enable or disable OS update plugin
   os: true
+  # Enable or disable pip plugin
+  pip: true

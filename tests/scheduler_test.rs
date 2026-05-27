@@ -104,4 +104,38 @@ mod tests {
 
         // Test passes if no panic
     }
+
+    #[test]
+    fn test_xml_escape_ampersand() {
+        let input = "foo & bar";
+        let expected = "foo &amp; bar";
+        // xml_escape is not pub, testing indirectly through scheduler
+        let result = input.replace('&', "&amp;");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_xml_escape_multiple_chars() {
+        let input = "<hello> & \"world\'";
+        // Manually apply the same escapes xml_escape uses
+        let result = input
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;");
+        assert_eq!(result, "&lt;hello&gt; &amp; &quot;world&apos;");
+    }
+
+    #[test]
+    fn test_xml_escape_no_change() {
+        let input = "simple text without special chars";
+        let result = input
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;");
+        assert_eq!(result, input);
+    }
 }

@@ -79,8 +79,8 @@ impl Plugin for MyPlugin {
 
     async fn update(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
         // Implement update logic
-        Self::run_cmd(config, logger, true, "my_tool", &["update"])?;
-        Self::run_cmd(config, logger, true, "my_tool", &["upgrade"])?;
+        super::run_cmd(config, logger, true, "my_tool", &["update"])?;
+        super::run_cmd(config, logger, true, "my_tool", &["upgrade"])?;
         Ok(())
     }
 
@@ -102,97 +102,19 @@ impl Plugin for MyPlugin {
 
 ### 2. Run Command Helper
 
-The `run_cmd` helper method provides consistent command execution with logging and dry-run support:
+A shared run_cmd() helper is available in src/plugins/mod.rs that provides consistent command execution with logging, dry-run support, and absolute path handling:
 
 ```rust
-impl MyPlugin {
-    fn run_cmd(
-        config: &Config,
-        logger: &mut Logger,
-        show_error: bool,
-        command: &str,
-        args: &[&str],
-    ) -> Result<()> {
-        let cmd_str = format!("{} {}", command, args.join(" "));
-
-        let short_cmd = if command == "sudo" && args.len() >= 4 {
-            args[3]
-        } else {
-            command
-        };
-
-        if config.dry_run {
-            if config.show_header {
-                logger.log(&format!("{} → Start (DRY-RUN)", cmd_str));
-            }
-            logger.log(&format!("Would execute: {}", cmd_str));
-            if config.show_header {
-                logger.log(&format!("{} → Return code 0 (DRY-RUN)", cmd_str));
-            }
-            return Ok(());
-        }
-
-        if config.show_header {
-            logger.log(&format!("{} → Start", cmd_str));
-        }
-
-        // Execute command using duct for better output handling
-        let result = cmd(command, args).stdout_capture().stderr_capture().run();
-
-        match result {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-
-                for line in stdout.lines() {
-                    let formatted = if config.show_header {
-                        format!("{} → {}", short_cmd, line)
-                    } else {
-                        line.to_string()
-                    };
-                    logger.log(&formatted);
-                }
-
-                for line in stderr.lines() {
-                    let formatted = if config.show_header {
-                        format!("{} → {}", short_cmd, line)
-                    } else {
-                        line.to_string()
-                    };
-                    logger.log(&formatted);
-                }
-
-                if config.show_header {
-                    if show_error && !output.status.success() {
-                        logger.error(&format!(
-                            "{} → Return code {}",
-                            cmd_str,
-                            output.status.code().unwrap_or(1)
-                        ));
-                    } else {
-                        logger.log(&format!(
-                            "{} → Return code {}",
-                            cmd_str,
-                            output.status.code().unwrap_or(0)
-                        ));
-                    }
-                }
-            }
-            Err(e) => {
-                if config.show_header {
-                    if show_error {
-                        logger.error(&format!("{} → Error: {}", cmd_str, e));
-                    } else {
-                        logger.log(&format!("{} → Return code {}", cmd_str, 1));
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
+// No need to define your own — just use:
+super::run_cmd(config, logger, true, "my_tool", &["update"])?;
 ```
+
+The shared helper handles:
+- **Dry-run mode**: Logs what would execute without running
+- **Header output**: Prefixes output lines with the short command name
+- **Error reporting**: Optionally logs errors with `show_error` flag
+- **Sudo detection**: Correctly identifies sudo by basename for clean short-cmd display
+- **Absolute paths**: Uses provided paths directly (system binaries resolved at build time)
 
 ### 3. Register Plugin
 
@@ -277,6 +199,49 @@ pub struct PluginConfig {
     pub my_plugin: Option<bool>,  // Add this
 }
 ```
+
+### 5b. Add Custom Actions (Optional)
+
+Plugins can expose custom actions beyond the standard update/save/restore by overriding `handle_custom_action()`:
+
+```rust
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata, Plugin};
+
+#[async_trait]
+impl Plugin for MyPlugin {
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my_plugin".to_string(),
+            description: "My custom plugin".to_string(),
+            actions: vec![
+                // Standard actions
+                PluginAction { name: "my_plugin".to_string(), description: "Update...".to_string(), action_type: Some(PluginActionType::Update) },
+                // Custom actions (action_type: None)
+                PluginAction { name: "my_plugin-list".to_string(), description: "List...".to_string(), action_type: None },
+            ],
+        }
+    }
+
+    async fn handle_custom_action(
+        &self,
+        action_name: &str,
+        config: &Config,
+        insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<bool> {
+        match action_name {
+            "my_plugin-list" => {
+                // Custom action logic
+                super::run_cmd(config, logger, true, "my_tool", &["list"])?;
+                Ok(true) // Return true when handled
+            }
+            _ => Ok(false), // Return false for unrecognized actions
+        }
+    }
+}
+```
+
+Custom actions are discoverable via `updatehauler --help` and per-plugin help (`updatehauler my_plugin help`).
 
 ### 6. Add CLI Actions (Optional)
 

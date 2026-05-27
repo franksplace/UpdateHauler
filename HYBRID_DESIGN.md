@@ -104,7 +104,7 @@ impl BrewPlugin {
 }
 ```
 
-#### Example 2: Custom Actions (New Capability)
+#### Example 2: Custom Actions (Implemented)
 
 ```rust
 impl BrewPlugin {
@@ -227,7 +227,7 @@ struct Args {
 
 1. **Discovery**: All actions available via `--help`
 2. **Consistency**: `brew` = update (convention), `brew-save` = save (specific)
-3. **Flexibility**: Plugins can add custom actions without core changes
+3. **Flexibility**: Custom actions like `brew-list`, `brew-outdated`, `nvim-health`
 4. **Multiple Actions**: Easy: `updatehauler brew brew-save os cargo`
 
 #### For Plugin Developers
@@ -253,12 +253,12 @@ struct Args {
 3. Add `get_action_by_name()` and `get_all_metadata()` to `PluginRegistry`
 4. Implement `execute_action()` in `PluginRegistry` with the hybrid logic
 
-#### Phase 2: Dynamic Actions (Future Enhancement)
+#### Phase 2: Dynamic Actions (Implemented)
 
-1. Add custom action support to plugin trait (optional method)
-2. Update action execution to call custom handlers
-3. Generate help dynamically from plugin metadata
-4. Remove hardcoded help text
+1. ✅ Custom action support via `handle_custom_action()` on Plugin trait
+2. ✅ Action execution calls custom handlers for custom action types
+3. ✅ Help generated dynamically from plugin metadata
+4. ✅ Removed hardcoded help text
 
 ### Comparison
 
@@ -266,7 +266,7 @@ struct Args {
 |----------|---------|--------|
 | Default action convention | ✅ `brew` = update | ✅ `brew` = update |
 | Specific actions | ✅ `brew-save` | ✅ `brew-save` |
-| Custom actions | ❌ Can't add | ✅ Can add |
+| Custom actions | ❌ Can't add | ✅ brew-list, brew-outdated, nvim-health, etc. |
 | Dynamic help | ❌ Hardcoded | ✅ Generated |
 | Plugin independence | ⚠️  Edit main.rs | ✅ Auto-registered |
 | Action discovery | ❌ Hidden | ✅ Visible in help |
@@ -290,9 +290,8 @@ updatehauler brew              # Update
 updatehauler brew-save          # Save
 updatehauler brew-restore       # Restore
 
-# Custom (FUTURE)
+# Custom (NOW AVAILABLE)
 updatehauler brew-list          # List all packages
-updatehauler brew-info <pkg>    # Show package info
 updatehauler brew-upgrade-pinned # Upgrade only pinned
 updatehauler brew-outdated     # Show outdated packages
 ```
@@ -303,7 +302,7 @@ updatehauler brew-outdated     # Show outdated packages
 updatehauler nvim              # Update
 updatehauler nvim-save          # Save (noted in config)
 
-# Custom (FUTURE)
+# Custom (NOW AVAILABLE)
 updatehauler nvim-list         # List installed plugins
 updatehauler nvim-clean         # Clean unused plugins
 updatehauler nvim-health        # Check plugin health
@@ -316,10 +315,9 @@ updatehauler cargo              # Update
 updatehauler cargo-save          # Save
 updatehauler cargo-restore       # Restore
 
-# Custom (FUTURE)
+# Custom (NOW AVAILABLE)
 updatehauler cargo-list        # List installed crates
 updatehauler cargo-outdated    # Show outdated crates
-updatehauler cargo-update-selective <crate> # Update specific crate
 ```
 
 ## Implementation Priority
@@ -330,11 +328,11 @@ updatehauler cargo-update-selective <crate> # Update specific crate
 3. ✅ Add registry methods: `get_action_by_name()`, `get_all_metadata()`
 4. ✅ Implement `execute_action()` with hybrid logic
 
-### Future (Next Version)
-1. Support custom action handlers
-2. Dynamic help generation from plugins
-3. Action completion for shell
-4. Per-plugin action discovery (`updatehauler brew --help`)
+### Implemented
+1. ✅ Custom action handlers (handle_custom_action on Plugin trait)
+2. ✅ Dynamic help generation from plugins
+3. ✅ Action completion for shell (bash, zsh, fish, powershell, elvish)
+4. ✅ Per-plugin action discovery (`updatehauler brew help`)
 
 ## Conclusion
 

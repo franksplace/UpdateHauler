@@ -190,4 +190,51 @@ cargo_save_file: "/tmp/test/cargo.json"
         assert_eq!(config.brew_file, PathBuf::from("/tmp/test/Brewfile"));
         assert_eq!(config.cargo_file, PathBuf::from("/tmp/test/cargo.json"));
     }
+
+    #[test]
+    fn test_validate_schedule_value_digits() {
+        use updatehauler::config::validate_schedule_value;
+        assert!(validate_schedule_value("0", "test").is_ok());
+        assert!(validate_schedule_value("*/5", "test").is_ok());
+        assert!(validate_schedule_value("1-31", "test").is_ok());
+        assert!(validate_schedule_value("1,15,30", "test").is_ok());
+    }
+
+    #[test]
+    fn test_validate_schedule_value_alpha() {
+        use updatehauler::config::validate_schedule_value;
+        assert!(validate_schedule_value("MON", "test").is_ok());
+        assert!(validate_schedule_value("mon-wed-fri", "test").is_ok());
+        assert!(validate_schedule_value("MON,WED,FRI", "test").is_ok());
+    }
+
+    #[test]
+    fn test_validate_schedule_value_empty() {
+        use updatehauler::config::validate_schedule_value;
+        assert!(validate_schedule_value("", "test").is_err());
+    }
+
+    #[test]
+    fn test_validate_schedule_value_invalid_chars() {
+        use updatehauler::config::validate_schedule_value;
+        assert!(validate_schedule_value("foo!", "test").is_err());
+        assert!(validate_schedule_value("@daily", "test").is_err());
+    }
+
+    #[test]
+    fn test_crontab_entry_format() {
+        let config = Config::new("/home/test");
+        let app_path = PathBuf::from("/usr/local/bin/updatehauler");
+        let entry = config.crontab_entry(&app_path);
+        // Should start with crontab timing, not "PATH="
+        assert!(
+            !entry.starts_with("PATH="),
+            "entry should not start with PATH="
+        );
+        assert!(entry.contains("PATH="), "entry should contain PATH=");
+        assert!(
+            entry.ends_with("--logfile-only 2>&1"),
+            "entry should end with logfile-only redirect"
+        );
+    }
 }

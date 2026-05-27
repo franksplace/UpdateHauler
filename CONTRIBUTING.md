@@ -88,7 +88,7 @@ Examples:
 feat: add support for npm plugin
 fix: prevent hang when brew-restore has no packages
 docs: update README with new examples
-test: add integration test for --run command
+test: add integration test for run --cmd command
 ```
 
 ### 5. Create a Pull Request

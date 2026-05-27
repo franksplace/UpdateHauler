@@ -1,7 +1,6 @@
 use updatehauler::config::Config;
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
-use updatehauler::plugins::levenshtein_distance;
 use updatehauler::plugins::{
     BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, Plugin, PluginActionType, PluginRegistry,
 };
@@ -146,27 +145,6 @@ fn test_action_types() {
         restore_action.unwrap().action_type,
         Some(PluginActionType::Restore)
     );
-}
-
-#[test]
-fn test_levenshtein_distance() {
-    // Exact match
-    assert_eq!(levenshtein_distance("brew", "brew"), 0);
-
-    // One character off
-    assert_eq!(levenshtein_distance("brew", "breq"), 1);
-    assert_eq!(levenshtein_distance("brew", "brea"), 1);
-
-    // Two characters off
-    assert_eq!(levenshtein_distance("brew", "brxy"), 2);
-
-    // Completely different
-    assert!(levenshtein_distance("brew", "cargo") > 3);
-
-    // Empty strings
-    assert_eq!(levenshtein_distance("", ""), 0);
-    assert_eq!(levenshtein_distance("", "brew"), 4);
-    assert_eq!(levenshtein_distance("brew", ""), 4);
 }
 
 #[test]

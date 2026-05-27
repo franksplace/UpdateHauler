@@ -18,6 +18,9 @@ pub struct Insights {
     pub pkg_mgr: Option<String>,
     pub has_brew: bool,
     pub has_cargo: bool,
+    pub has_npm: bool,
+    pub has_pip: bool,
+    pub has_uv: bool,
     pub app_abspath: PathBuf,
 }
 
@@ -78,6 +81,9 @@ impl Insights {
 
         let has_brew = which("brew").is_ok();
         let has_cargo = which("cargo").is_ok();
+        let has_npm = which("npm").is_ok();
+        let has_pip = which("pip3").or_else(|_| which("pip")).is_ok();
+        let has_uv = which("uv").is_ok();
 
         let app_abspath =
             std::env::current_exe().with_context(|| "Failed to get executable path")?;
@@ -94,6 +100,9 @@ impl Insights {
             pkg_mgr,
             has_brew,
             has_cargo,
+            has_npm,
+            has_pip,
+            has_uv,
             app_abspath,
         })
     }

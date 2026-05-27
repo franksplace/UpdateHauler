@@ -77,7 +77,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--run", "echo", "test"])
+            .args(["run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -97,7 +97,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--color", "--run", "echo", "test"])
+            .args(["--color", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -113,7 +113,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--no-color", "--run", "echo", "test"])
+            .args(["--no-color", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -129,7 +129,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--datetime", "--run", "echo", "test"])
+            .args(["--datetime", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 

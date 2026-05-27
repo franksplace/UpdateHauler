@@ -19,9 +19,11 @@ UpdateHauler now uses a modular plugin architecture:
 ### Package Manager Plugins
 
 **General Package Manager Plugins:**
-- **Homebrew Plugin** - Update, upgrade, cleanup, and backup/restore brew formulas and casks
-- **Cargo Plugin** - Update installed cargo packages and backup/restore cargo packages
-- **Neovim Plugin** - Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)
+- **Homebrew Plugin** - Update, upgrade, cleanup, and backup/restore brew formulas and casks. Includes custom actions: `brew-list`, `brew-outdated`, `brew-upgrade-pinned`
+- **Cargo Plugin** - Update installed cargo packages and backup/restore cargo packages. Includes custom actions: `cargo-list`, `cargo-outdated`
+- **Neovim Plugin** - Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug). Includes custom actions: `nvim-list`, `nvim-clean`, `nvim-health`
+- **npm Plugin** - Update globally installed npm packages, save and restore
+- **pip Plugin** - Update pip packages, save and restore
 
 **OS Package Manager Plugin:**
 - **OS Plugin** - System updates for multiple platforms:
@@ -38,7 +40,7 @@ UpdateHauler now uses a modular plugin architecture:
 ### Key Capabilities
 
 - **Plugin-Based Architecture** - Modular, extensible system for adding new package managers
-- **Automated Updates** - Update OS packages, Homebrew, Cargo, and Neovim plugins in a single command
+- **Automated Updates** - Update OS packages, Homebrew, Cargo, npm, pip, and Neovim plugins in a single command
 - **YAML Configuration** - Optional configuration file for fine-grained control over behavior
 - **Backup & Restore** - Save and restore package configurations for brew, cargo, and nvim
 - **Scheduling** - Set up automated updates via cron (Linux) or launchd (macOS)
@@ -67,18 +69,22 @@ updatehauler [OPTIONS] [ACTION]...
 | `--no-color` | Disable color output |
 | `--logfile-only` | Output only to logfile (no stdout) |
 | `--dry-run` | Preview what would be done without making changes (no password prompts, perfect for CI/CD) |
+| `--notify` | Send desktop notification when updates complete (uses `osascript` on macOS, `notify-send` on Linux) |
 | `--config <FILE>` | YAML configuration file path (default: `~/.config/updatehauler/config.yaml`) |
 | `--logfile <FILE>` | Specify custom logfile location (default: `~/.local/updates.log`) |
 | `--max-log-lines <N>` | Set maximum logfile lines for rotation (default: 10000) |
 | `--installdir <PATH>` | Set installation directory (default: `~/.local/bin`) |
 | `--brew-save-file <FILE>` | Specify custom brew save file location (default: `~/.config/brew/{os}-Brewfile`) |
 | `--cargo-save-file <FILE>` | Specify custom cargo save file location (default: `~/.config/cargo/{os}-{arch}-cargo-backup.json`) |
+| `--enable-plugin <PLUGIN>` | Enable a specific plugin (overrides config file) |
+| `--disable-plugin <PLUGIN>` | Disable a specific plugin (overrides config file) |
 | `--sched-minute <MIN>` | Set schedule minute (default: 0) |
 | `--sched-hour <HOUR>` | Set schedule hour (default: 2) |
 | `--sched-day-of-month <DAY>` | Set schedule day of month (default: *) |
 | `--sched-month <MONTH>` | Set schedule month (default: *) |
-| `--sched-day-of-week <DAY_OF_WEEK>` | Set schedule day of week (default: *) |
-| `--run <CMD>...` | Run an arbitrary command with logging |
+| `--sched-day-of-week <DAY_OF_WEEK>` | Set schedule day of week (supports digits, `*,-/`, and crontab day names like `MON,WED,FRI`) |
+| `--list-plugins` | List all available plugins and their enabled/available status |
+| `--cmd <CMD>...` | Specify a command to run with the `run` action |
 | `-h, --help` | Show help information |
 | `-V, --version` | Print version information |
 
@@ -90,8 +96,10 @@ updatehauler [OPTIONS] [ACTION]...
 |--------|-------------|
 | `brew` | Update, upgrade, and cleanup brew formulas and casks |
 | `cargo` | Update cargo-installed packages (requires `cargo-install-update`) |
+| `npm` | Update globally installed npm packages |
 | `nvim` | Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug) |
 | `os` | Update OS and app-based packages |
+| `pip` | Update pip packages |
 
 #### Backup/Restore Actions
 
@@ -101,8 +109,25 @@ updatehauler [OPTIONS] [ACTION]...
 | `brew-restore` | Restore brew installation from Brewfile |
 | `cargo-save` | Save current cargo packages to backup JSON (requires `cargo-backup`) |
 | `cargo-restore` | Restore cargo packages from backup JSON (requires `cargo-restore`) |
+| `npm-save` | Save globally installed npm packages to JSON |
+| `npm-restore` | Restore globally installed npm packages from JSON |
 | `nvim-save` | Note nvim plugin configuration (plugins are defined in your nvim config) |
 | `nvim-restore` | Restore nvim plugins using your configured plugin manager |
+| `pip-save` | Save pip packages to requirements file |
+| `pip-restore` | Restore pip packages from requirements file |
+
+#### Utility Actions
+
+| Action | Description |
+|--------|-------------|
+| `brew-list` | List all installed brew formulas |
+| `brew-outdated` | Show outdated brew formulas and casks |
+| `brew-upgrade-pinned` | Upgrade only pinned brew formulas |
+| `cargo-list` | List all installed cargo packages |
+| `cargo-outdated` | Show outdated cargo packages (requires `cargo-outdated`) |
+| `nvim-list` | List installed nvim plugins |
+| `nvim-clean` | Clean unused nvim plugins |
+| `nvim-health` | Check nvim plugin health |
 
 #### Scheduling Actions
 
@@ -134,8 +159,13 @@ When run without actions, updatehauler automatically (controlled by YAML config)
 3. Saves brew configuration (if enabled)
 4. Updates Cargo packages (if installed and enabled)
 5. Saves cargo configuration (if enabled)
-6. Updates Neovim plugins (if enabled)
-7. Trims logfile
+6. Updates npm global packages (if installed and enabled)
+7. Saves npm configuration (if enabled)
+8. Updates pip packages (if installed and enabled)
+9. Updates Neovim plugins (if enabled)
+10. Trims logfile
+
+After all actions complete, a summary is printed showing the number of successful and failed actions. If any action failed, the exit code is non-zero.
 
 ### Error Handling
 
@@ -158,15 +188,39 @@ updatehauler os
 updatehauler brew brew-save
 ```
 
+### Update npm and pip
+```bash
+updatehauler npm pip
+```
+
+### List or check specific plugins
+```bash
+updatehauler brew-list            # List installed brew formulas
+updatehauler brew-outdated        # Show outdated brew packages
+updatehauler cargo-outdated       # Show outdated cargo packages
+updatehauler nvim-health          # Check nvim plugin health
+```
+
 ### Save to custom backup file locations
 ```bash
 updatehauler --brew-save-file "/custom/path/Brewfile" brew-save
 updatehauler --cargo-save-file "/custom/path/cargo-backup.json" cargo-save
 ```
 
+### Enable/disable plugins at runtime
+```bash
+updatehauler --enable-plugin nvim               # Enable nvim for this run
+updatehauler --disable-plugin cargo pip         # Disable cargo and pip for this run
+```
+
 ### Run with debug output
 ```bash
 updatehauler --debug
+```
+
+### Desktop notifications on completion
+```bash
+updatehauler --notify
 ```
 
 ### Dry-run mode - preview changes
@@ -180,6 +234,9 @@ updatehauler --dry-run brew cargo
 
 # Dry-run with custom schedule time
 updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule enable
+
+# Dry-run a custom command
+updatehauler --dry-run run --cmd "echo test"
 ```
 
 ### Schedule daily updates at 2 AM
@@ -196,7 +253,7 @@ updatehauler --sched-hour "15" --sched-minute "30" schedule enable
 updatehauler --sched-day-of-month "1" schedule enable
 
 # Schedule for Monday, Wednesday, Friday at 10 AM
-updatehauler --sched-day-of-week "MWF" --sched-hour "10" schedule enable
+updatehauler --sched-day-of-week "MON,WED,FRI" --sched-hour "10" schedule enable
 ```
 
 ### Check scheduling status
@@ -208,6 +265,8 @@ updatehauler schedule check
 ```bash
 updatehauler brew-restore
 updatehauler cargo-restore
+updatehauler npm-restore
+updatehauler pip-restore
 ```
 
 ### Install to system
@@ -217,16 +276,7 @@ updatehauler install
 
 ### Run arbitrary command with logging
 ```bash
-updatehauler --run echo "Hello World"
-```
-
-### Dry-run mode
-```bash
-# See what would be updated without actually updating
-updatehauler --dry-run
-
-# Dry-run specific actions
-updatehauler --dry-run os brew
+updatehauler run --cmd echo "Hello World"
 ```
 
 ## Dependencies
@@ -239,6 +289,7 @@ updatehauler --dry-run os brew
 - **cargo-install-update** - For updating cargo packages (`cargo install cargo-install-update`)
 - **cargo-backup** - For backing up cargo packages (`cargo install cargo-backup`)
 - **cargo-restore** - For restoring cargo packages (`cargo install cargo-restore`)
+- **cargo-outdated** - For checking outdated cargo packages (`cargo install cargo-outdated`)
 - **mas** (macOS only) - For Mac App Store updates (`brew install mas`)
 - **brew cu** (macOS only) - For updating casks (`brew tap buo/cask-upgrade && brew install buo/cask-upgrade/brew-cu-completion`)
 
@@ -249,6 +300,8 @@ updatehauler --dry-run os brew
 - **Log file**: `~/.local/updates.log`
 - **Brew backup**: `~/.config/brew/{OS}-Brewfile`
 - **Cargo backup**: `~/.config/cargo/{OS}-{ARCH}-cargo-backup.json`
+- **npm backup**: `~/.config/npm/{OS}-npm-packages.json`
+- **pip backup**: `~/.config/pip/{OS}-pip-requirements.txt`
 
 ### Custom Configuration
 
@@ -299,12 +352,17 @@ schedule:
   month: "*"
   day_of_week: "*"
 
+# Notifications
+# notify: true
+
 # Plugin configuration
 plugins:
   brew: true
   cargo: true
   nvim: false
+  npm: true
   os: true
+  pip: true
 ```
 
 **Available YAML Options:**
@@ -317,6 +375,7 @@ plugins:
 | `color` | bool | Enable color output |
 | `use_log` | bool | Enable logging to file |
 | `dry_run` | bool | Enable dry-run mode |
+| `notify` | bool | Enable desktop notifications |
 | `max_log_lines` | number | Maximum log lines before rotation |
 | `logfile` | string | Custom log file path |
 | `installdir` | string | Installation directory |
@@ -326,11 +385,13 @@ plugins:
 | `schedule.hour` | string | Schedule hour (0-23) |
 | `schedule.day_of_month` | string | Schedule day of month (1-31 or *) |
 | `schedule.month` | string | Schedule month (1-12 or *) |
-| `schedule.day_of_week` | string | Schedule day of week (0-7 or *) |
+| `schedule.day_of_week` | string | Schedule day of week (0-7 or day names like MON,WED,FRI) |
 | `plugins.brew` | bool | Enable/disable brew plugin |
 | `plugins.cargo` | bool | Enable/disable cargo plugin |
 | `plugins.nvim` | bool | Enable/disable nvim plugin |
+| `plugins.npm` | bool | Enable/disable npm plugin |
 | `plugins.os` | bool | Enable/disable OS plugin |
+| `plugins.pip` | bool | Enable/disable pip plugin |
 
 **Note:** Command-line options override YAML configuration settings.
 
@@ -411,8 +472,7 @@ updatehauler --dry-run brew brew-save cargo cargo-save
 
 ## What UpdateHauler Does NOT Do
 
-- ❌ Update Node.js packages (npm/yarn/pnpm)
-- ❌ Update Python packages (pip)
+- ❌ Update Yarn/PNPM packages
 - ❌ Update Ruby gems
 - ❌ Update Go modules
 - ❌ Update docker containers
@@ -625,7 +685,7 @@ Before creating a release candidate, run the comprehensive test suite:
 This test suite validates:
 - Binary compilation
 - Unit and integration tests
-- Command-line options (--help, --version, --run, etc.)
+- Command-line options (--help, --version, --cmd, --list-plugins, etc.)
 - Real-time output streaming
 - Error handling for invalid actions
 - All flag combinations (--no-color, --no-datetime, --no-header, --debug)

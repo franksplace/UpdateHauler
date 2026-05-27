@@ -142,10 +142,15 @@ updatehauler brew
 updatehauler brew-save
 updatehauler brew-restore
 
-# Possible future additions (not implemented)
+# Custom actions (now available)
 updatehauler brew-list       # List installed packages
-updatehauler brew-info        # Show package info
-updatehauler brew-search      # Search for packages
+updatehauler brew-outdated    # Show outdated packages
+updatehauler brew-upgrade-pinned  # Upgrade only pinned packages
+updatehauler cargo-list       # List installed cargo packages
+updatehauler cargo-outdated   # Show outdated cargo packages
+updatehauler nvim-list        # List installed nvim plugins
+updatehauler nvim-clean       # Clean unused nvim plugins
+updatehauler nvim-health      # Check nvim plugin health
 ```
 
 ## Conclusion
