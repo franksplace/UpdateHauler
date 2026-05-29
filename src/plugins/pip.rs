@@ -49,11 +49,28 @@ impl Plugin for PipPlugin {
         logger: &mut Logger,
     ) -> Result<()> {
         if insights.has_uv {
-            super::run_cmd(config, logger, true, "uv", &["pip", "list", "--outdated", "--format=freeze"])?;
-            super::run_cmd(config, logger, true, "uv", &["self", "update"])?;
+            super::run_cmd(config, logger, true, "uv", &["pip", "list", "--outdated"])?;
+            super::run_cmd(
+                config,
+                logger,
+                false,
+                    "sh",
+                    &[
+                        "-c",
+                        "uv pip list --outdated --format=columns 2>/dev/null | tail -n +3 | grep -v '^Using' | awk '{print $1}' | xargs -r uv pip install --upgrade --system --break-system-packages 2>&1 || true",
+                    ],
+            )?;
         } else {
-            super::run_cmd(config, logger, true, "pip", &["list", "--outdated", "--format=freeze"])?;
-            super::run_cmd(config, logger, true, "pip", &["install", "--upgrade", "pip"])?;
+            super::run_cmd(
+                config,
+                logger,
+                true,
+                "sh",
+                &[
+                    "-c",
+                    "pip list --outdated --format=freeze 2>/dev/null | cut -d= -f1 | xargs pip install --upgrade 2>&1 || true",
+                ],
+            )?;
         }
 
         Ok(())
