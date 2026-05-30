@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use update_hauler::insights::Insights;
+    use updatehauler::insights::Insights;
 
     #[test]
     fn test_insights_creation() {

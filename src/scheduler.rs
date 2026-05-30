@@ -6,6 +6,14 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
 pub struct Scheduler<'a> {
     config: &'a Config,
     insights: &'a Insights,
@@ -102,6 +110,17 @@ impl<'a> Scheduler<'a> {
     fn cron_check(&mut self) -> Result<()> {
         let current_tab = self.get_crontab()?;
 
+        if self.config.dry_run {
+            self.logger.log("Would check crontab status (DRY-RUN)");
+            if current_tab.is_empty() {
+                self.logger.log("no crontab at all enabled (DRY-RUN)");
+            } else {
+                self.logger
+                    .log(&format!("Current crontab:\n{} (DRY-RUN)", current_tab));
+            }
+            return Ok(());
+        }
+
         if current_tab.is_empty() {
             self.logger.error("no crontab at all enabled");
             return Ok(());
@@ -113,7 +132,9 @@ impl<'a> Scheduler<'a> {
     }
 
     fn get_crontab(&self) -> Result<String> {
-        let output = std::process::Command::new("crontab").arg("-l").output();
+        let output = std::process::Command::new("/usr/bin/crontab")
+            .arg("-l")
+            .output();
 
         match output {
             Ok(result) => Ok(String::from_utf8_lossy(&result.stdout).to_string()),
@@ -125,7 +146,7 @@ impl<'a> Scheduler<'a> {
         use std::io::Write;
         use std::process::{Command, Stdio};
 
-        let mut child = Command::new("crontab")
+        let mut child = Command::new("/usr/bin/crontab")
             .arg("-")
             .stdin(Stdio::piped())
             .spawn()?;
@@ -154,6 +175,7 @@ impl<'a> Scheduler<'a> {
             .context("Failed to create LaunchAgents directory")?;
 
         let app_path = self.insights.app_abspath.to_string_lossy().to_string();
+        let path_env = self.config.get_scheduler_path();
 
         let plist_content = format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -168,12 +190,19 @@ impl<'a> Scheduler<'a> {
     <string>{}</string>
     <string>--logfile-only</string>
   </array>
-{}
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>{}</string>
+  </dict>
+ {}
 </dict>
 </plist>
 "#,
             label,
             app_path,
+            path_env,
             self.build_calendar_interval()
         );
 
@@ -191,24 +220,34 @@ impl<'a> Scheduler<'a> {
 
         let time_str = format!("{}:{}:00", pm_hour, pm_min);
 
-        let _ = std::process::Command::new("sudo")
-            .args(["pmset", "repeat", "wakeorpoweron", "MTWRFSU", &time_str])
+        let pmset_result = std::process::Command::new("/usr/bin/sudo")
+            .args([
+                "/usr/bin/pmset",
+                "repeat",
+                "wakeorpoweron",
+                "MTWRFSU",
+                &time_str,
+            ])
             .status();
+        if let Err(e) = pmset_result {
+            self.logger
+                .error(&format!("Failed to set pmset wake schedule: {}", e));
+        }
 
         let uid = nix::unistd::Uid::effective().as_raw();
         let domain_target = format!("gui/{}", uid);
         let service_name = format!("{}/{}", domain_target, label);
 
-        let _ = std::process::Command::new("launchctl")
+        let _ = std::process::Command::new("/bin/launchctl")
             .args(["bootout", &service_name])
             .stderr(std::process::Stdio::null())
             .status();
 
-        std::process::Command::new("launchctl")
+        std::process::Command::new("/bin/launchctl")
             .args(["bootstrap", &domain_target, &plist_path.to_string_lossy()])
             .status()?;
 
-        std::process::Command::new("launchctl")
+        std::process::Command::new("/bin/launchctl")
             .args(["kickstart", "-k", &service_name])
             .status()?;
 
@@ -227,15 +266,19 @@ impl<'a> Scheduler<'a> {
         let plist_path = format!("{}/{}.plist", launch_agents_dir, label);
         let plist_path = PathBuf::from(&plist_path);
 
-        let _ = std::process::Command::new("sudo")
-            .args(["pmset", "repeat", "cancel"])
+        let pmset_result = std::process::Command::new("/usr/bin/sudo")
+            .args(["/usr/bin/pmset", "repeat", "cancel"])
             .status();
+        if let Err(e) = pmset_result {
+            self.logger
+                .error(&format!("Failed to cancel pmset schedule: {}", e));
+        }
 
         let uid = nix::unistd::Uid::effective().as_raw();
         let domain_target = format!("gui/{}", uid);
         let service_name = format!("{}/{}", domain_target, label);
 
-        let _ = std::process::Command::new("launchctl")
+        let _ = std::process::Command::new("/bin/launchctl")
             .args(["bootout", &service_name])
             .stderr(std::process::Stdio::null())
             .status();
@@ -259,6 +302,15 @@ impl<'a> Scheduler<'a> {
         let plist_path = format!("{}/{}.plist", launch_agents_dir, label);
         let plist_path = PathBuf::from(&plist_path);
 
+        if self.config.dry_run {
+            self.logger
+                .log(&format!("LaunchAgent plist: {:?} (DRY-RUN)", plist_path));
+            self.logger.log("Would check plist existence (DRY-RUN)");
+            self.logger.log("Would check launchctl status (DRY-RUN)");
+            self.logger.log("Would check pmset schedule (DRY-RUN)");
+            return Ok(());
+        }
+
         self.logger
             .log(&format!("LaunchAgent plist: {:?}", plist_path));
         if plist_path.exists() {
@@ -273,7 +325,7 @@ impl<'a> Scheduler<'a> {
         let domain_target = format!("gui/{}", uid);
         let full_service = format!("{}/{}", domain_target, label);
 
-        let result = std::process::Command::new("launchctl")
+        let result = std::process::Command::new("/bin/launchctl")
             .args(["print", &full_service])
             .output();
 
@@ -297,7 +349,7 @@ impl<'a> Scheduler<'a> {
 
         self.logger.log("\nPower Management Schedule:");
 
-        let result = std::process::Command::new("pmset")
+        let result = std::process::Command::new("/usr/bin/pmset")
             .args(["-g", "sched"])
             .output();
 
@@ -315,35 +367,35 @@ impl<'a> Scheduler<'a> {
         if self.config.sched_minute != "*" {
             parts.push_str(&format!(
                 "\n    <key>Minute</key>\n    <integer>{}</integer>",
-                self.config.sched_minute
+                xml_escape(&self.config.sched_minute)
             ));
         }
 
         if self.config.sched_hour != "*" {
             parts.push_str(&format!(
                 "\n    <key>Hour</key>\n    <integer>{}</integer>",
-                self.config.sched_hour
+                xml_escape(&self.config.sched_hour)
             ));
         }
 
         if self.config.sched_day_of_month != "*" {
             parts.push_str(&format!(
                 "\n    <key>Day</key>\n    <integer>{}</integer>",
-                self.config.sched_day_of_month
+                xml_escape(&self.config.sched_day_of_month)
             ));
         }
 
         if self.config.sched_month != "*" {
             parts.push_str(&format!(
                 "\n    <key>Month</key>\n    <integer>{}</integer>",
-                self.config.sched_month
+                xml_escape(&self.config.sched_month)
             ));
         }
 
         if self.config.sched_day_of_week != "*" {
             parts.push_str(&format!(
                 "\n    <key>Weekday</key>\n    <integer>{}</integer>",
-                self.config.sched_day_of_week
+                xml_escape(&self.config.sched_day_of_week)
             ));
         }
 

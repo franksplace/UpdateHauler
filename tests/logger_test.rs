@@ -2,8 +2,8 @@
 mod tests {
     use std::fs;
     use tempfile::TempDir;
-    use update_hauler::config::Config;
-    use update_hauler::logger::Logger;
+    use updatehauler::config::Config;
+    use updatehauler::logger::Logger;
 
     #[test]
     fn test_logger_creation() {

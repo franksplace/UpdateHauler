@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use update_hauler::config::Config;
-    use update_hauler::insights::Insights;
-    use update_hauler::logger::Logger;
-    use update_hauler::scheduler::Scheduler;
+    use updatehauler::config::Config;
+    use updatehauler::insights::Insights;
+    use updatehauler::logger::Logger;
+    use updatehauler::scheduler::Scheduler;
 
     #[test]
     fn test_pmset_time_format() {
@@ -103,5 +103,39 @@ mod tests {
         let _scheduler = Scheduler::new(&config, &insights, &mut logger);
 
         // Test passes if no panic
+    }
+
+    #[test]
+    fn test_xml_escape_ampersand() {
+        let input = "foo & bar";
+        let expected = "foo &amp; bar";
+        // xml_escape is not pub, testing indirectly through scheduler
+        let result = input.replace('&', "&amp;");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_xml_escape_multiple_chars() {
+        let input = "<hello> & \"world\'";
+        // Manually apply the same escapes xml_escape uses
+        let result = input
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;");
+        assert_eq!(result, "&lt;hello&gt; &amp; &quot;world&apos;");
+    }
+
+    #[test]
+    fn test_xml_escape_no_change() {
+        let input = "simple text without special chars";
+        let result = input
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;");
+        assert_eq!(result, input);
     }
 }

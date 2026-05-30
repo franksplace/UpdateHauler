@@ -1,0 +1,356 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  validate-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check title format
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $TITLE"
+
+          # Check for conventional commit format
+          # Examples: feat: add new feature, fix: correct bug, docs: update readme
+          if echo "$TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .+'; then
+            echo "✓ Title follows conventional commit format"
+            exit 0
+          elif echo "$TITLE" | grep -qE '^(Update|Bump|Release|Add|Fix|Remove|Change|Update|Improve|Refactor|Implement|Add support)'; then
+            echo "✓ Title follows common conventions"
+            exit 0
+          else
+            echo "::warning::Title does not follow conventional commit format"
+            echo "Suggested format: type: description"
+            echo "Types: feat, fix, docs, style, refactor, test, chore, build, ci, perf, revert"
+            exit 1
+          fi
+
+  validate-body:
+    name: Validate PR Body
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR body
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+
+          echo "Checking PR body..."
+
+          # Check if body is not empty
+          if [ -z "$BODY" ]; then
+            echo "::warning::PR body is empty"
+            echo "Please provide a description of your changes"
+            exit 1
+          fi
+
+          # Check for common sections (optional but recommended)
+          if echo "$BODY" | grep -qi "changes\|added\|removed\|fixed\|updated\|description"; then
+            echo "✓ PR body includes description of changes"
+          else
+            echo "::warning::PR body should describe changes"
+            echo "Consider adding: What changed, Why, How tested"
+          fi
+
+          echo "✓ PR body is present"
+
+  check-size:
+    name: Estimate PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate changes
+        id: changes
+        run: |
+          # Count lines added and removed
+          if [ "${{ github.event_name }}" = "synchronize" ] || [ "${{ github.event_name }}" = "opened" ]; then
+            ADDED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= insertion)' || echo 0)
+            REMOVED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= deletion)' || echo 0)
+            TOTAL=$((ADDED + REMOVED))
+
+            echo "added=$ADDED" >> $GITHUB_OUTPUT
+            echo "removed=$REMOVED" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+            echo "Lines added: $ADDED"
+            echo "Lines removed: $REMOVED"
+            echo "Total changes: $TOTAL"
+
+            # Determine size category
+            if [ $TOTAL -lt 100 ]; then
+              echo "size=XS" >> $GITHUB_OUTPUT
+              echo "📏 PR Size: XS (< 100 lines)"
+            elif [ $TOTAL -lt 500 ]; then
+              echo "size=S" >> $GITHUB_OUTPUT
+              echo "📏 PR Size: S (100-499 lines)"
+            elif [ $TOTAL -lt 1000 ]; then
+              echo "size=M" >> $GITHUB_OUTPUT
+              echo "📏 PR Size: M (500-999 lines)"
+            elif [ $TOTAL -lt 2000 ]; then
+              echo "size=L" >> $GITHUB_OUTPUT
+              echo "📏 PR Size: L (1000-1999 lines)"
+            else
+              echo "size=XL" >> $GITHUB_OUTPUT
+              echo "📏 PR Size: XL (2000+ lines)"
+            fi
+          fi
+
+      - name: Comment size on PR
+        if: github.event_name == 'opened'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ steps.changes.outputs.size }}';
+            const added = '${{ steps.changes.outputs.added }}';
+            const removed = '${{ steps.changes.outputs.removed }}';
+
+            if (size) {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `### 📊 PR Size Analysis\n\n- **Size**: ${size}\n- **Lines Added**: ${added}\n- **Lines Removed**: ${removed}\n\n_This comment is automatically generated._`
+              });
+            }
+
+  label-pr:
+    name: Label PR
+    runs-on: ubuntu-latest
+    needs: [validate-title, validate-body, check-size]
+    if: github.event_name == 'opened'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Add size label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ needs.check-size.outputs.size }}';
+            if (!size) return;
+
+            let label;
+            switch (size) {
+              case 'XS': label = 'size/XS'; break;
+              case 'S': label = 'size/S'; break;
+              case 'M': label = 'size/M'; break;
+              case 'L': label = 'size/L'; break;
+              case 'XL': label = 'size/XL'; break;
+            }
+
+            // Remove existing size labels
+            const sizeLabels = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            for (const label of labels) {
+              if (sizeLabels.includes(label.name)) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label.name,
+                });
+              }
+            }
+
+            // Add new size label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [label],
+            });
+
+      - name: Add type label based on title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title.toLowerCase();
+
+            let typeLabel;
+            if (title.startsWith('feat')) typeLabel = 'type/feature';
+            else if (title.startsWith('fix')) typeLabel = 'type/bug';
+            else if (title.startsWith('docs')) typeLabel = 'type/documentation';
+            else if (title.startsWith('style')) typeLabel = 'type/style';
+            else if (title.startsWith('refactor')) typeLabel = 'type/refactor';
+            else if (title.startsWith('test')) typeLabel = 'type/test';
+            else if (title.startsWith('chore')) typeLabel = 'type/chore';
+            else if (title.startsWith('build')) typeLabel = 'type/build';
+            else if (title.startsWith('ci')) typeLabel = 'type/ci';
+            else if (title.startsWith('perf')) typeLabel = 'type/performance';
+            else if (title.startsWith('revert')) typeLabel = 'type/revert';
+            else return; // Unknown type
+
+            // Add type label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [typeLabel],
+            });
+
+  welcome-new-contributors:
+    name: Welcome First-Time Contributors
+    runs-on: ubuntu-latest
+    if: github.event_name == 'opened'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if first-time contributor
+        id: first_time
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the PR author
+            const author = context.payload.pull_request.user.login;
+
+            // Check user's public activity in this repo
+            const { data: issues } = await github.rest.issues.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              creator: author,
+              state: 'all',
+              per_page: 2,
+            });
+
+            // Check for any commits by this user
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              author: author,
+              per_page: 2,
+            });
+
+            // If less than 2 issues and commits, they're likely new
+            const isFirstTime = issues.length <= 1 && commits.length <= 1;
+
+            console.log(`First time contributor: ${isFirstTime}`);
+            core.setOutput('is_first_time', isFirstTime);
+
+      - name: Post welcome message
+        if: steps.first_time.outputs.is_first_time == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author = context.payload.pull_request.user.login;
+            const prNumber = context.issue.number;
+
+            const welcomeMessage = `### 👋 Welcome, @${author}!
+
+            Thanks for opening your first PR to updatehauler! 🎉
+
+            Here's what happens next:
+            - 🤖 CI will run tests and checks automatically
+            - 📋 Maintainers will review your changes
+            - 💬 Feel free to ask questions or request changes
+
+            ### 📚 Resources
+            - [Contributing Guidelines](https://github.com/${{ github.repository }}/blob/main/README.md)
+            - [Code of Conduct](https://github.com/${{ github.repository }}/blob/main/LICENSE)
+            - [Documentation](https://github.com/${{ github.repository }}/blob/main/README.md)
+
+            Thanks for contributing! 🚀`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: welcomeMessage,
+            });
+
+  check-dependabot:
+    name: Check if Dependabot PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check author
+        id: check_author
+        run: |
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot-preview[bot]" ]; then
+            echo "is_dependabot=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_dependabot=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auto-merge Dependabot PRs
+        if: steps.check_author.outputs.is_dependabot == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Only auto-merge if all status checks pass
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha,
+            });
+
+            const allPassed = checks.every(check =>
+              check.conclusion === 'success'
+            );
+
+            if (allPassed) {
+              // Merge dependabot PR automatically
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                merge_method: 'squash',
+              });
+
+              console.log('Auto-merged Dependabot PR');
+            }
+
+  notify-team:
+    name: Notify Team on Large PRs
+    runs-on: ubuntu-latest
+    needs: [check-size]
+    if: needs.check-size.outputs.size == 'XL'
+    steps:
+      - name: Post notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ needs.check-size.outputs.size }}';
+            const prUrl = context.payload.pull_request.html_url;
+            const prTitle = context.payload.pull_request.title;
+
+            const message = `### 🚨 Large PR Detected
+
+            **PR**: ${prTitle} (${size})
+            **URL**: ${prUrl}
+
+            This PR has been marked as **XL size** (2000+ lines).
+            Please consider:
+            - Breaking into smaller, focused PRs
+            - Reviewing with extra care
+            - Ensuring tests are comprehensive
+
+            _This notification is automatic._`;
+
+            // Comment on the PR
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message,
+            });

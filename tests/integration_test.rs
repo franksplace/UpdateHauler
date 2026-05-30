@@ -64,8 +64,8 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        // Should complete but not do anything for invalid actions
-        assert!(output.status.success());
+        // Should fail for invalid actions with clap validation
+        assert!(!output.status.success());
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--run", "echo", "test"])
+            .args(["run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -97,7 +97,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--color", "--run", "echo", "test"])
+            .args(["--color", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -113,7 +113,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--no-color", "--run", "echo", "test"])
+            .args(["--no-color", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -129,10 +129,130 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["--datetime", "--run", "echo", "test"])
+            .args(["--datetime", "run", "--cmd", "echo", "test"])
             .output()
             .expect("Failed to execute updatehauler");
 
         assert!(output.status.success());
+    }
+
+    #[test]
+    fn test_plugin_help_brew() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["brew", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: brew"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("brew"));
+        assert!(stdout.contains("brew-save"));
+        assert!(stdout.contains("brew-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_cargo() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["cargo", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: cargo"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("cargo"));
+        assert!(stdout.contains("cargo-save"));
+        assert!(stdout.contains("cargo-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_nvim() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["nvim", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: nvim"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("nvim"));
+        assert!(stdout.contains("nvim-save"));
+        assert!(stdout.contains("nvim-restore"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_os() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["os", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(output.status.success());
+        assert!(stdout.contains("Plugin: os"));
+        assert!(stdout.contains("Description:"));
+        assert!(stdout.contains("Available Actions:"));
+        assert!(stdout.contains("os"));
+        assert!(stdout.contains("Examples:"));
+    }
+
+    #[test]
+    fn test_plugin_help_invalid() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["invalid-plugin", "help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        assert!(!output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        // With clap PossibleValuesParser, error comes from clap validation
+        assert!(stdout.contains("invalid value") || stderr.contains("invalid value"));
+        assert!(stdout.contains("possible values:") || stderr.contains("possible values:"));
     }
 }
