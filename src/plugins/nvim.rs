@@ -247,10 +247,19 @@ end
                 let script_path = std::env::temp_dir().join("updatehauler_nvim_health.lua");
                 std::fs::write(&script_path, lua_script)?;
 
-                let output = cmd("nvim", &["--headless", "-c", &format!("luafile {}", script_path.display()), "-c", "qa"])
-                    .stdout_capture()
-                    .stderr_capture()
-                    .run();
+                let output = cmd(
+                    "nvim",
+                    &[
+                        "--headless",
+                        "-c",
+                        &format!("luafile {}", script_path.display()),
+                        "-c",
+                        "qa",
+                    ],
+                )
+                .stdout_capture()
+                .stderr_capture()
+                .run();
 
                 let _ = std::fs::remove_file(&script_path);
 

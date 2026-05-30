@@ -41,8 +41,9 @@ impl Plugin for UvPlugin {
                 },
                 PluginAction {
                     name: "uvx".to_string(),
-                    description: "Run a tool with uvx (use: updatehauler run --cmd \"uvx <tool> [args]\")"
-                        .to_string(),
+                    description:
+                        "Run a tool with uvx (use: updatehauler run --cmd \"uvx <tool> [args]\")"
+                            .to_string(),
                     action_type: None,
                 },
             ],
@@ -66,7 +67,9 @@ impl Plugin for UvPlugin {
                 Ok(true)
             }
             "uvx" => {
-                logger.log("Use: updatehauler run --cmd \"uvx <tool> [args]\" to run a tool with uvx");
+                logger.log(
+                    "Use: updatehauler run --cmd \"uvx <tool> [args]\" to run a tool with uvx",
+                );
                 logger.log("Or directly:  uvx <tool> [args]");
                 Ok(true)
             }
@@ -84,12 +87,7 @@ impl Plugin for UvPlugin {
         Ok(())
     }
 
-    async fn save(
-        &self,
-        config: &Config,
-        insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
+    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
         let uv_file = config.uv_file.to_string_lossy().to_string();
 
         if let Some(parent) = config.uv_file.parent() {
@@ -98,13 +96,7 @@ impl Plugin for UvPlugin {
 
         logger.log(&format!("Saving uv tools list to {}", uv_file));
 
-        super::run_cmd(
-            config,
-            logger,
-            true,
-            "uv",
-            &["tool", "list"],
-        )?;
+        super::run_cmd(config, logger, true, "uv", &["tool", "list"])?;
 
         self.update(config, insights, logger).await?;
 

@@ -727,30 +727,21 @@ fn main() -> Result<ExitCode> {
     if let Some(npm_file) = args.npm_save_file {
         let p = PathBuf::from(&npm_file);
         if p.components().any(|c| c == std::path::Component::ParentDir) {
-            anyhow::bail!(
-                "--npm-save-file path contains '..' traversal: {}",
-                npm_file
-            );
+            anyhow::bail!("--npm-save-file path contains '..' traversal: {}", npm_file);
         }
         config.npm_file = p;
     }
     if let Some(pip_file) = args.pip_save_file {
         let p = PathBuf::from(&pip_file);
         if p.components().any(|c| c == std::path::Component::ParentDir) {
-            anyhow::bail!(
-                "--pip-save-file path contains '..' traversal: {}",
-                pip_file
-            );
+            anyhow::bail!("--pip-save-file path contains '..' traversal: {}", pip_file);
         }
         config.pip_file = p;
     }
     if let Some(uv_file) = args.uv_save_file {
         let p = PathBuf::from(&uv_file);
         if p.components().any(|c| c == std::path::Component::ParentDir) {
-            anyhow::bail!(
-                "--uv-save-file path contains '..' traversal: {}",
-                uv_file
-            );
+            anyhow::bail!("--uv-save-file path contains '..' traversal: {}", uv_file);
         }
         config.uv_file = p;
     }
@@ -771,7 +762,10 @@ fn main() -> Result<ExitCode> {
 
     if args.list_plugins {
         let rt = tokio::runtime::Runtime::new()?;
-        println!("{:<20} {:<10} {:<10}  Description", "Plugin", "Enabled", "Available");
+        println!(
+            "{:<20} {:<10} {:<10}  Description",
+            "Plugin", "Enabled", "Available"
+        );
         println!("{:-<20} {:-<10} {:-<10}  {:-<40}", "", "", "", "");
         for metadata in plugin_registry.get_all_metadata() {
             let enabled = match metadata.name.as_str() {

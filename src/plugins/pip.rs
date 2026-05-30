@@ -54,11 +54,11 @@ impl Plugin for PipPlugin {
                 config,
                 logger,
                 false,
-                    "sh",
-                    &[
-                        "-c",
-                        "uv pip list --outdated --format=columns 2>/dev/null | tail -n +3 | grep -v '^Using' | awk '{print $1}' | xargs -r uv pip install --upgrade --system --break-system-packages 2>&1 || true",
-                    ],
+                "sh",
+                &[
+                    "-c",
+                    "uv pip list --outdated --format=columns 2>/dev/null | tail -n +3 | grep -v '^Using' | awk '{print $1}' | xargs -r uv pip install --upgrade --system --break-system-packages 2>&1 || true",
+                ],
             )?;
         } else {
             super::run_cmd(
@@ -76,12 +76,7 @@ impl Plugin for PipPlugin {
         Ok(())
     }
 
-    async fn save(
-        &self,
-        config: &Config,
-        insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
+    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
         let pip_file = config.pip_file.to_string_lossy().to_string();
 
         if let Some(parent) = config.pip_file.parent() {
@@ -117,7 +112,13 @@ impl Plugin for PipPlugin {
 
         logger.log(&format!("Restoring pip packages from {}", pip_file));
         if insights.has_uv {
-            super::run_cmd(config, logger, true, "uv", &["pip", "install", "-r", &pip_file])?;
+            super::run_cmd(
+                config,
+                logger,
+                true,
+                "uv",
+                &["pip", "install", "-r", &pip_file],
+            )?;
         } else {
             super::run_cmd(config, logger, true, "pip", &["install", "-r", &pip_file])?;
         }
