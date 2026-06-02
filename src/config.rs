@@ -74,6 +74,20 @@ plugins:
   pip: true
   # Enable or disable uv plugin
   uv: true
+  # Enable or disable rustup plugin
+  rustup: true
+  # Enable or disable Flatpak plugin
+  flatpak: false
+  # Enable or disable Snap plugin
+  snap: false
+  # Enable or disable VSCode extensions plugin
+  vscode: true
+  # Enable or disable Docker cleanup plugin
+  docker: false
+  # Enable or disable Ruby gem plugin
+  gem: true
+  # Enable or disable Deno plugin
+  deno: true
 "#
     .to_string()
 }
@@ -137,6 +151,13 @@ pub struct PluginConfig {
     pub npm: Option<bool>,
     pub pip: Option<bool>,
     pub uv: Option<bool>,
+    pub rustup: Option<bool>,
+    pub flatpak: Option<bool>,
+    pub snap: Option<bool>,
+    pub vscode: Option<bool>,
+    pub docker: Option<bool>,
+    pub gem: Option<bool>,
+    pub deno: Option<bool>,
 }
 
 #[derive(Clone)]
@@ -167,6 +188,7 @@ pub struct Config {
     pub uv_file: PathBuf,
     pub plugins_enabled: PluginConfig,
     pub cmd_args: Vec<String>,
+    pub only_plugin: Option<String>,
 }
 
 impl Config {
@@ -206,8 +228,16 @@ impl Config {
                 npm: Some(true),
                 pip: Some(true),
                 uv: Some(true),
+                rustup: Some(true),
+                flatpak: Some(false),
+                snap: Some(false),
+                vscode: Some(true),
+                docker: Some(false),
+                gem: Some(true),
+                deno: Some(true),
             },
             cmd_args: Vec::new(),
+            only_plugin: None,
         }
     }
 
@@ -333,6 +363,13 @@ impl Config {
             "os" => self.plugins_enabled.os = Some(enabled),
             "pip" => self.plugins_enabled.pip = Some(enabled),
             "uv" => self.plugins_enabled.uv = Some(enabled),
+            "rustup" => self.plugins_enabled.rustup = Some(enabled),
+            "flatpak" => self.plugins_enabled.flatpak = Some(enabled),
+            "snap" => self.plugins_enabled.snap = Some(enabled),
+            "vscode" => self.plugins_enabled.vscode = Some(enabled),
+            "docker" => self.plugins_enabled.docker = Some(enabled),
+            "gem" => self.plugins_enabled.gem = Some(enabled),
+            "deno" => self.plugins_enabled.deno = Some(enabled),
             _ => {}
         }
     }

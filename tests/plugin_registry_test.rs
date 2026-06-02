@@ -2,7 +2,8 @@ use updatehauler::config::Config;
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
 use updatehauler::plugins::{
-    BrewPlugin, CargoPlugin, NvimPlugin, OsPlugin, Plugin, PluginActionType, PluginRegistry,
+    BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NvimPlugin,
+    OsPlugin, Plugin, PluginActionType, PluginRegistry, RustupPlugin, SnapPlugin, VscodePlugin,
 };
 
 fn create_test_config() -> Config {
@@ -63,6 +64,46 @@ fn test_plugin_metadata_cargo() {
 }
 
 #[test]
+fn test_plugin_metadata_deno() {
+    let deno = DenoPlugin;
+    let metadata = deno.get_metadata();
+
+    assert_eq!(metadata.name, "deno");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_docker() {
+    let docker = DockerPlugin;
+    let metadata = docker.get_metadata();
+
+    assert_eq!(metadata.name, "docker");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_flatpak() {
+    let flatpak = FlatpakPlugin;
+    let metadata = flatpak.get_metadata();
+
+    assert_eq!(metadata.name, "flatpak");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_gem() {
+    let gem = GemPlugin;
+    let metadata = gem.get_metadata();
+
+    assert_eq!(metadata.name, "gem");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
 fn test_plugin_metadata_nvim() {
     let nvim = NvimPlugin;
     let metadata = nvim.get_metadata();
@@ -83,12 +124,41 @@ fn test_plugin_metadata_os() {
 }
 
 #[test]
+fn test_plugin_metadata_rustup() {
+    let rustup = RustupPlugin;
+    let metadata = rustup.get_metadata();
+
+    assert_eq!(metadata.name, "rustup");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_snap() {
+    let snap = SnapPlugin;
+    let metadata = snap.get_metadata();
+
+    assert_eq!(metadata.name, "snap");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_vscode() {
+    let vscode = VscodePlugin;
+    let metadata = vscode.get_metadata();
+
+    assert_eq!(metadata.name, "vscode");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
 fn test_get_action_by_name() {
     let mut registry = PluginRegistry::new();
     registry.register(Box::new(BrewPlugin));
     registry.register(Box::new(CargoPlugin));
 
-    // Test existing actions
     let brew_action = registry.get_action_by_name("brew");
     assert!(brew_action.is_some());
     assert_eq!(brew_action.unwrap().name, "brew");
@@ -100,7 +170,6 @@ fn test_get_action_by_name() {
     let cargo_action = registry.get_action_by_name("cargo");
     assert!(cargo_action.is_some());
 
-    // Test nonexistent action
     let nonexistent = registry.get_action_by_name("nonexistent");
     assert!(nonexistent.is_none());
 }
@@ -110,13 +179,31 @@ fn test_get_all_metadata() {
     let mut registry = PluginRegistry::new();
     registry.register(Box::new(BrewPlugin));
     registry.register(Box::new(CargoPlugin));
+    registry.register(Box::new(DenoPlugin));
+    registry.register(Box::new(DockerPlugin));
+    registry.register(Box::new(FlatpakPlugin));
+    registry.register(Box::new(GemPlugin));
+    registry.register(Box::new(NvimPlugin));
+    registry.register(Box::new(OsPlugin));
+    registry.register(Box::new(RustupPlugin));
+    registry.register(Box::new(SnapPlugin));
+    registry.register(Box::new(VscodePlugin));
 
     let all_metadata = registry.get_all_metadata();
-    assert_eq!(all_metadata.len(), 2);
+    assert_eq!(all_metadata.len(), 11);
 
     let names: Vec<&str> = all_metadata.iter().map(|m| m.name.as_str()).collect();
     assert!(names.contains(&"brew"));
     assert!(names.contains(&"cargo"));
+    assert!(names.contains(&"deno"));
+    assert!(names.contains(&"docker"));
+    assert!(names.contains(&"flatpak"));
+    assert!(names.contains(&"gem"));
+    assert!(names.contains(&"nvim"));
+    assert!(names.contains(&"os"));
+    assert!(names.contains(&"rustup"));
+    assert!(names.contains(&"snap"));
+    assert!(names.contains(&"vscode"));
 }
 
 #[test]
@@ -124,7 +211,6 @@ fn test_action_types() {
     let brew = BrewPlugin;
     let metadata = brew.get_metadata();
 
-    // Find action by name and check types
     let update_action = metadata.actions.iter().find(|a| a.name == "brew");
     assert!(update_action.is_some());
     assert_eq!(
@@ -153,16 +239,13 @@ fn test_find_similar_actions() {
     registry.register(Box::new(BrewPlugin));
     registry.register(Box::new(CargoPlugin));
 
-    // Test typo - one character off
     let similar = registry.find_similar_actions("breq");
     assert!(!similar.is_empty());
     assert!(similar.iter().any(|s| s.contains("brew")));
 
-    // Test prefix match
     let similar = registry.find_similar_actions("brew");
     assert!(similar.iter().any(|s| s.starts_with("brew")));
 
-    // Test non-similar action
     let similar = registry.find_similar_actions("xyzabc123");
     assert!(similar.is_empty());
 }
@@ -174,7 +257,6 @@ async fn test_custom_action_handler_default() {
     let insights = create_test_insights();
     let mut logger = create_test_logger(&config);
 
-    // Default implementation should return false (not handled)
     let result: Result<bool, _> = brew
         .handle_custom_action("custom-action", &config, &insights, &mut logger)
         .await;
@@ -189,12 +271,10 @@ fn test_get_all_action_names() {
 
     let action_names = registry.get_all_action_names();
 
-    // Should include plugin actions
     assert!(action_names.contains(&"brew".to_string()));
     assert!(action_names.contains(&"brew-save".to_string()));
     assert!(action_names.contains(&"brew-restore".to_string()));
 
-    // Should include non-plugin commands
     assert!(action_names.contains(&"install".to_string()));
     assert!(action_names.contains(&"update".to_string()));
     assert!(action_names.contains(&"remove".to_string()));

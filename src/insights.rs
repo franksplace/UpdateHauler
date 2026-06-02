@@ -21,6 +21,14 @@ pub struct Insights {
     pub has_npm: bool,
     pub has_pip: bool,
     pub has_uv: bool,
+    pub has_rustup: bool,
+    pub has_flatpak: bool,
+    pub has_snap: bool,
+    pub has_vscode: bool,
+    pub has_docker: bool,
+    pub has_gem: bool,
+    pub has_deno: bool,
+    pub vscode_bin: Option<String>,
     pub app_abspath: PathBuf,
 }
 
@@ -84,6 +92,18 @@ impl Insights {
         let has_npm = which("npm").is_ok();
         let has_pip = which("pip3").or_else(|_| which("pip")).is_ok();
         let has_uv = which("uv").is_ok();
+        let has_rustup = which("rustup").is_ok();
+        let has_flatpak = which("flatpak").is_ok();
+        let has_snap = which("snap").is_ok();
+        let has_vscode = which("code").or_else(|_| which("cursor")).is_ok();
+        let has_docker = which("docker").is_ok();
+        let has_gem = which("gem").is_ok();
+        let has_deno = which("deno").is_ok();
+
+        let vscode_bin = which("code")
+            .or_else(|_| which("cursor"))
+            .ok()
+            .map(|p| p.to_string_lossy().to_string());
 
         let app_abspath =
             std::env::current_exe().with_context(|| "Failed to get executable path")?;
@@ -103,6 +123,14 @@ impl Insights {
             has_npm,
             has_pip,
             has_uv,
+            has_rustup,
+            has_flatpak,
+            has_snap,
+            has_vscode,
+            has_docker,
+            has_gem,
+            has_deno,
+            vscode_bin,
             app_abspath,
         })
     }

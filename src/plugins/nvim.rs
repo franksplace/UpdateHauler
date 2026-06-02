@@ -12,16 +12,40 @@ use which::which;
 pub struct NvimPlugin;
 
 impl NvimPlugin {
+    fn detect_mason() -> bool {
+        let home = std::env::var("HOME").ok();
+        home.as_ref()
+            .map(|h| PathBuf::from(h).join(".local/share/nvim/mason/mason.json"))
+            .is_some_and(|p| p.exists())
+    }
+
+    fn update_mason(config: &Config, logger: &mut Logger) -> Result<()> {
+        super::run_cmd(
+            config,
+            logger,
+            false,
+            "nvim",
+            &["--headless", "-c", "MasonUpdate", "-c", "qa"],
+        )?;
+        super::run_cmd(
+            config,
+            logger,
+            false,
+            "nvim",
+            &["--headless", "-c", "MasonToolsUpdate", "-c", "qa"],
+        )
+    }
+
     fn get_metadata_internal(&self) -> PluginMetadata {
         PluginMetadata {
             name: "nvim".to_string(),
-            description: "Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)"
+            description: "Update Neovim plugins and Mason LSP/tools (supports lazy.nvim, packer.nvim, vim-plug)"
                 .to_string(),
             actions: vec![
                 PluginAction {
                     name: "nvim".to_string(),
                     description:
-                        "Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug)"
+                        "Update Neovim plugins and Mason LSP/tools (supports lazy.nvim, packer.nvim, vim-plug)"
                             .to_string(),
                     action_type: Some(PluginActionType::Update),
                 },
@@ -165,7 +189,7 @@ impl Plugin for NvimPlugin {
     }
 
     async fn check_available(&self, _config: &Config, _insights: &Insights) -> bool {
-        which("nvim").is_ok() && Self::detect_plugin_manager().is_some()
+        which("nvim").is_ok() && (Self::detect_plugin_manager().is_some() || Self::detect_mason())
     }
 
     async fn handle_custom_action(
@@ -296,14 +320,30 @@ end
     ) -> Result<()> {
         let plugin_manager = Self::detect_plugin_manager();
 
-        match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::update_lazy_nvim(config, logger)?,
-            Some("packer.nvim") => Self::update_packer_nvim(config, logger)?,
-            Some("vim-plug") => Self::update_vim_plug(config, logger)?,
-            _ => {
-                logger.log("No supported nvim plugin manager detected (lazy.nvim, packer.nvim, or vim-plug)");
-                return Ok(());
+        let plugin_manager_found = match plugin_manager.as_deref() {
+            Some("lazy.nvim") => {
+                Self::update_lazy_nvim(config, logger)?;
+                true
             }
+            Some("packer.nvim") => {
+                Self::update_packer_nvim(config, logger)?;
+                true
+            }
+            Some("vim-plug") => {
+                Self::update_vim_plug(config, logger)?;
+                true
+            }
+            _ => false,
+        };
+
+        if !plugin_manager_found && !Self::detect_mason() {
+            logger.log("No supported nvim plugin manager or Mason detected (lazy.nvim, packer.nvim, vim-plug)");
+            return Ok(());
+        }
+
+        if Self::detect_mason() {
+            logger.log("Updating Mason tools...");
+            Self::update_mason(config, logger)?;
         }
 
         Ok(())
