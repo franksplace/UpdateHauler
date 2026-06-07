@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 use anyhow::Result;
+use duct::cmd;
 
 pub struct PipPlugin;
 
@@ -84,11 +85,22 @@ impl Plugin for PipPlugin {
         }
 
         logger.log(&format!("Saving pip packages to {}", pip_file));
-        if insights.has_uv {
-            super::run_cmd(config, logger, true, "uv", &["pip", "freeze"])?;
+
+        let (prog, args) = if insights.has_uv {
+            ("uv", &["pip", "freeze"] as &[&str])
         } else {
-            super::run_cmd(config, logger, true, "pip", &["freeze"])?;
+            ("pip", &["freeze"] as &[&str])
+        };
+
+        let output = cmd(prog, args).stdout_capture().stderr_capture().run()?;
+
+        if !output.stdout.is_empty() {
+            std::fs::write(&pip_file, &output.stdout)?;
         }
+        if !output.stderr.is_empty() {
+            logger.log(&String::from_utf8_lossy(&output.stderr));
+        }
+
         logger.log("Success savefile written");
 
         Ok(())

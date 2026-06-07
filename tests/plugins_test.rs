@@ -6,8 +6,9 @@ mod tests {
     use updatehauler::logger::Logger;
     #[allow(unused_imports)]
     use updatehauler::plugins::{
-        BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NvimPlugin,
-        OsPlugin, Plugin, PluginRegistry, RustupPlugin, SnapPlugin, VscodePlugin,
+        BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NpmPlugin,
+        NvimPlugin, OsPlugin, PipPlugin, Plugin, PluginRegistry, RustupPlugin, SnapPlugin,
+        UvPlugin, VscodePlugin,
     };
 
     #[test]
@@ -294,12 +295,208 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_plugin_save_dry_run() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.brew_save_dir = temp_dir.path().to_path_buf();
+        config.cargo_save_dir = temp_dir.path().to_path_buf();
+        config.npm_file = temp_dir.path().join("npm-packages.json");
+        config.pip_file = temp_dir.path().join("pip-requirements.txt");
+        config.uv_file = temp_dir.path().join("uv-tools.json");
+        config.brew_file = config.brew_save_dir.join("test-Brewfile");
+        config.cargo_file = config.cargo_save_dir.join("test-cargo-backup.json");
+        config.dry_run = true;
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let plugins: Vec<Box<dyn Plugin>> = vec![
+            Box::new(BrewPlugin),
+            Box::new(CargoPlugin),
+            Box::new(NpmPlugin),
+            Box::new(NvimPlugin),
+            Box::new(PipPlugin),
+            Box::new(UvPlugin),
+        ];
+
+        for plugin in &plugins {
+            let result = plugin.save(&config, &insights, &mut logger).await;
+            assert!(result.is_ok(), "{} save failed in dry-run", plugin.name());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_plugin_restore_dry_run() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.brew_save_dir = temp_dir.path().to_path_buf();
+        config.cargo_save_dir = temp_dir.path().to_path_buf();
+        config.npm_file = temp_dir.path().join("npm-packages.json");
+        config.pip_file = temp_dir.path().join("pip-requirements.txt");
+        config.uv_file = temp_dir.path().join("uv-tools.json");
+        config.brew_file = config.brew_save_dir.join("test-Brewfile");
+        config.cargo_file = config.cargo_save_dir.join("test-cargo-backup.json");
+        config.dry_run = true;
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let plugins: Vec<Box<dyn Plugin>> = vec![
+            Box::new(BrewPlugin),
+            Box::new(CargoPlugin),
+            Box::new(NpmPlugin),
+            Box::new(NvimPlugin),
+            Box::new(PipPlugin),
+            Box::new(UvPlugin),
+        ];
+
+        for plugin in &plugins {
+            let result = plugin.restore(&config, &insights, &mut logger).await;
+            assert!(
+                result.is_ok(),
+                "{} restore failed in dry-run",
+                plugin.name()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_npm_save_writes_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.npm_file = temp_dir.path().join("npm-packages.json");
+        config.dry_run = false;
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let npm_plugin = NpmPlugin;
+
+        if insights.has_npm {
+            let result = npm_plugin.save(&config, &insights, &mut logger).await;
+            assert!(result.is_ok(), "npm save failed");
+            let npm_file = temp_dir.path().join("npm-packages.json");
+            assert!(npm_file.exists(), "npm save file was not created");
+            let content = std::fs::read_to_string(&npm_file).unwrap_or_default();
+            assert!(!content.is_empty(), "npm save file is empty");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pip_save_writes_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.pip_file = temp_dir.path().join("pip-requirements.txt");
+        config.dry_run = false;
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let pip_plugin = PipPlugin;
+
+        if insights.has_pip || insights.has_uv {
+            let result = pip_plugin.save(&config, &insights, &mut logger).await;
+            assert!(result.is_ok(), "pip save failed");
+            let pip_file = temp_dir.path().join("pip-requirements.txt");
+            assert!(pip_file.exists(), "pip save file was not created");
+            let content = std::fs::read_to_string(&pip_file).unwrap_or_default();
+            assert!(!content.is_empty(), "pip save file is empty");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_uv_save_writes_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.uv_file = temp_dir.path().join("uv-tools.json");
+        config.dry_run = false;
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let uv_plugin = UvPlugin;
+
+        if insights.has_uv {
+            let result = uv_plugin.save(&config, &insights, &mut logger).await;
+            assert!(result.is_ok(), "uv save failed");
+            let uv_file = temp_dir.path().join("uv-tools.json");
+            assert!(uv_file.exists(), "uv save file was not created");
+            let content = std::fs::read_to_string(&uv_file).unwrap_or_default();
+            assert!(!content.is_empty(), "uv save file is empty");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_npm_restore_with_saved_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.npm_file = temp_dir.path().join("npm-packages.json");
+        config.dry_run = true;
+
+        std::fs::write(&config.npm_file, "{\"dependencies\":{}}\n")
+            .expect("Failed to write test save file");
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let npm_plugin = NpmPlugin;
+        let result = npm_plugin.restore(&config, &insights, &mut logger).await;
+        assert!(result.is_ok(), "npm restore with saved file failed");
+    }
+
+    #[tokio::test]
+    async fn test_pip_restore_with_saved_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.pip_file = temp_dir.path().join("pip-requirements.txt");
+        config.dry_run = true;
+
+        std::fs::write(&config.pip_file, "# pip requirements\n")
+            .expect("Failed to write test save file");
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let pip_plugin = PipPlugin;
+        let result = pip_plugin.restore(&config, &insights, &mut logger).await;
+        assert!(result.is_ok(), "pip restore with saved file failed");
+    }
+
+    #[tokio::test]
+    async fn test_uv_restore_with_saved_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let mut config = Config::new("/tmp/test");
+        config.uv_file = temp_dir.path().join("uv-tools.json");
+        config.dry_run = true;
+
+        std::fs::write(&config.uv_file, "ruff\npdm\n").expect("Failed to write test save file");
+
+        let insights = Insights::new().expect("Failed to create Insights");
+        let mut logger = Logger::new(&config);
+
+        let uv_plugin = UvPlugin;
+        let result = uv_plugin.restore(&config, &insights, &mut logger).await;
+        assert!(result.is_ok(), "uv restore with saved file failed");
+    }
+
+    #[tokio::test]
     async fn test_plugin_restore_missing_files() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
 
         let mut config = Config::new("/tmp/test");
         config.brew_save_dir = temp_dir.path().to_path_buf();
         config.cargo_save_dir = temp_dir.path().to_path_buf();
+        config.npm_file = temp_dir.path().join("nonexistent-npm.json");
+        config.pip_file = temp_dir.path().join("nonexistent-pip.txt");
+        config.uv_file = temp_dir.path().join("nonexistent-uv.txt");
         config.brew_file = config.brew_save_dir.join("nonexistent-Brewfile");
         config.cargo_file = config.cargo_save_dir.join("nonexistent-cargo-backup.json");
         config.dry_run = false;
@@ -309,8 +506,14 @@ mod tests {
 
         let brew_plugin = BrewPlugin;
         let cargo_plugin = CargoPlugin;
+        let npm_plugin = NpmPlugin;
+        let pip_plugin = PipPlugin;
+        let uv_plugin = UvPlugin;
 
         let _ = brew_plugin.restore(&config, &insights, &mut logger).await;
         let _ = cargo_plugin.restore(&config, &insights, &mut logger).await;
+        let _ = npm_plugin.restore(&config, &insights, &mut logger).await;
+        let _ = pip_plugin.restore(&config, &insights, &mut logger).await;
+        let _ = uv_plugin.restore(&config, &insights, &mut logger).await;
     }
 }
