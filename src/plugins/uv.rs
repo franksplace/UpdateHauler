@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 use anyhow::Result;
+use duct::cmd;
 
 pub struct UvPlugin;
 
@@ -96,7 +97,17 @@ impl Plugin for UvPlugin {
 
         logger.log(&format!("Saving uv tools list to {}", uv_file));
 
-        super::run_cmd(config, logger, true, "uv", &["tool", "list"])?;
+        let output = cmd("uv", &["tool", "list"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()?;
+
+        if !output.stdout.is_empty() {
+            std::fs::write(&uv_file, &output.stdout)?;
+        }
+        if !output.stderr.is_empty() {
+            logger.log(&String::from_utf8_lossy(&output.stderr));
+        }
 
         self.update(config, insights, logger).await?;
 
@@ -122,7 +133,18 @@ impl Plugin for UvPlugin {
         }
 
         logger.log(&format!("Restoring uv tools from {}", uv_file));
-        logger.log("uv tools are installed on demand — re-run 'uv tool install' for needed tools");
+
+        let content = std::fs::read_to_string(&uv_file)?;
+        for line in content.lines() {
+            let tool = line.trim();
+            if tool.is_empty() || tool.starts_with('-') || tool.starts_with('#') {
+                continue;
+            }
+            let name = tool.split(&['@', ' '][..]).next().unwrap_or(tool);
+            if !name.is_empty() {
+                super::run_cmd(config, logger, true, "uv", &["tool", "install", name])?;
+            }
+        }
 
         Ok(())
     }

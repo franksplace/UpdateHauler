@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check title format
         run: |
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check PR body
         run: |
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -109,7 +109,7 @@ jobs:
 
       - name: Comment size on PR
         if: github.event_name == 'opened'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const size = '${{ steps.changes.outputs.size }}';
@@ -134,10 +134,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Add size label
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const size = '${{ needs.check-size.outputs.size }}';
@@ -180,7 +180,7 @@ jobs:
             });
 
       - name: Add type label based on title
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = context.payload.pull_request.title.toLowerCase();
@@ -213,11 +213,11 @@ jobs:
     if: github.event_name == 'opened'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if first-time contributor
         id: first_time
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             // Get the PR author
@@ -248,7 +248,7 @@ jobs:
 
       - name: Post welcome message
         if: steps.first_time.outputs.is_first_time == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const author = context.payload.pull_request.user.login;
@@ -293,7 +293,7 @@ jobs:
 
       - name: Auto-merge Dependabot PRs
         if: steps.check_author.outputs.is_dependabot == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -327,7 +327,7 @@ jobs:
     if: needs.check-size.outputs.size == 'XL'
     steps:
       - name: Post notification
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const size = '${{ needs.check-size.outputs.size }}';

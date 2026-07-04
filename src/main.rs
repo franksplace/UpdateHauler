@@ -14,9 +14,11 @@ use updatehauler::logger::Logger;
 use updatehauler::scheduler::Scheduler;
 use updatehauler::self_install::SelfInstaller;
 use updatehauler::{
-    plugins::BrewPlugin, plugins::CargoPlugin, plugins::NpmPlugin, plugins::NvimPlugin,
+    plugins::BrewPlugin, plugins::CargoPlugin, plugins::DenoPlugin, plugins::DockerPlugin,
+    plugins::FlatpakPlugin, plugins::GemPlugin, plugins::NpmPlugin, plugins::NvimPlugin,
     plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType, plugins::PluginRegistry,
-    plugins::RunPlugin, plugins::UvPlugin, register_plugins,
+    plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin, plugins::UvPlugin,
+    plugins::VscodePlugin, register_plugins,
 };
 
 fn build_help_text() -> &'static str {
@@ -66,7 +68,7 @@ Maintenance Actions:
    <plugin> help      Show detailed help for a specific plugin
 
  Default Actions (when no actions specified):
-   Controlled by YAML config or: os, brew, cargo, brew-save, cargo-save, trim-logfile
+    Controlled by YAML config (varies by platform and installed tools)
 
  Examples:
    updatehauler                       # Run all default actions
@@ -77,11 +79,12 @@ Maintenance Actions:
    updatehauler --no-datetime         # Run without timestamps
    updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
    updatehauler schedule enable       # Enable daily updates at 2 AM
-   updatehauler run --cmd "echo hello" # Run arbitrary command
-   updatehauler --list-plugins        # List all plugins and their status
-   updatehauler brew help            # Show detailed help for brew plugin
-   updatehauler install-completions  # Install shell completions
-   updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
+    updatehauler run --cmd "echo hello" # Run arbitrary command
+    updatehauler --list-plugins        # List all plugins and their status
+    updatehauler --only brew           # Run only the brew plugin
+    updatehauler brew help            # Show detailed help for brew plugin
+    updatehauler install-completions  # Install shell completions
+    updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
  "#,
     );
 
@@ -158,12 +161,19 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         registry,
         BrewPlugin,
         CargoPlugin,
+        DenoPlugin,
+        DockerPlugin,
+        FlatpakPlugin,
+        GemPlugin,
         NpmPlugin,
         NvimPlugin,
         OsPlugin,
         PipPlugin,
         RunPlugin,
-        UvPlugin
+        RustupPlugin,
+        SnapPlugin,
+        UvPlugin,
+        VscodePlugin
     );
     registry
 }
@@ -175,10 +185,10 @@ fn generate_custom_bash_completion(config: &Config) -> String {
 
 _{app_name}() {{
     local cur prev words cword
-    local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run uv uv-save uv-restore uv-list uvx init schedule install update remove install-completions trim-logfile"
+    local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode init schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
-    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --enable-plugin --disable-plugin --help --version"
+    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
 
     cur="${{COMP_WORDS[COMP_CWORD]}}"
     prev="${{COMP_WORDS[COMP_CWORD-1]}}"
@@ -228,6 +238,10 @@ _{app_name}() {{
         'cargo-restore:Restore cargo packages from backup JSON'
         'cargo-list:List all installed cargo packages'
         'cargo-outdated:Show outdated cargo packages'
+        'deno:Upgrade the Deno runtime'
+        'docker:Clean up unused Docker data'
+        'flatpak:Update Flatpak applications'
+        'gem:Update Ruby gems'
         'nvim:Update Neovim plugins'
         'nvim-save:Save nvim plugin configuration'
         'nvim-restore:Restore nvim plugins'
@@ -242,7 +256,14 @@ _{app_name}() {{
         'pip-save:Save pip packages to requirements file'
         'pip-restore:Restore pip packages from requirements file'
         'run:Run an arbitrary command via --cmd'
+        'rustup:Update Rust toolchains'
         'schedule:Manage scheduled updates'
+        'snap:Update Snap packages'
+        'uv:Update uv tools'
+        'uv-save:Save uv tools to JSON'
+        'uv-restore:Restore uv tools from JSON'
+        'uv-list:List installed uv tools'
+        'vscode:Update VSCode/Cursor extensions'
         'install:Install this script to system'
         'update:Update this script on the system'
         'remove:Remove this script from system'
@@ -293,6 +314,7 @@ _{app_name}() {{
         '--config-file+[YAML configuration file path]:FILE:_files' \
         '*--cmd+[Command to run with the run action]:CMD:_cmdstring' \
         '--list-plugins[List available plugins and their status]' \
+        '--only+[Run only the specified plugin]:PLUGIN:(brew cargo deno docker flatpak gem npm nvim os pip rustup snap uv vscode)' \
         '(-h --help)'{{-h,--help}}'[Print help]' \
         '(-V --version)'{{-V,--version}}'[Print version]' \
         '*:: :->action_args'
@@ -547,6 +569,13 @@ struct Args {
     #[arg(
         long,
         value_name = "PLUGIN",
+        help = "Run only the specified plugin (overrides default actions)"
+    )]
+    only: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "PLUGIN",
         help = "Enable a specific plugin (overrides config)"
     )]
     enable_plugin: Vec<String>,
@@ -576,6 +605,10 @@ struct Args {
             "cargo-restore",
             "cargo-list",
             "cargo-outdated",
+            "deno",
+            "docker",
+            "flatpak",
+            "gem",
             "nvim",
             "nvim-save",
             "nvim-restore",
@@ -590,12 +623,15 @@ struct Args {
             "pip-save",
             "pip-restore",
             "run",
+            "rustup",
             "schedule",
+            "snap",
             "uv",
             "uv-save",
             "uv-restore",
             "uv-list",
             "uvx",
+            "vscode",
             "init",
             "install",
             "update",
@@ -771,11 +807,18 @@ fn main() -> Result<ExitCode> {
             let enabled = match metadata.name.as_str() {
                 "brew" => config.plugins_enabled.brew.unwrap_or(false),
                 "cargo" => config.plugins_enabled.cargo.unwrap_or(false),
+                "deno" => config.plugins_enabled.deno.unwrap_or(false),
+                "docker" => config.plugins_enabled.docker.unwrap_or(false),
+                "flatpak" => config.plugins_enabled.flatpak.unwrap_or(false),
+                "gem" => config.plugins_enabled.gem.unwrap_or(false),
                 "nvim" => config.plugins_enabled.nvim.unwrap_or(false),
                 "npm" => config.plugins_enabled.npm.unwrap_or(false),
                 "os" => config.plugins_enabled.os.unwrap_or(false),
                 "pip" => config.plugins_enabled.pip.unwrap_or(false),
+                "rustup" => config.plugins_enabled.rustup.unwrap_or(false),
+                "snap" => config.plugins_enabled.snap.unwrap_or(false),
                 "uv" => config.plugins_enabled.uv.unwrap_or(false),
+                "vscode" => config.plugins_enabled.vscode.unwrap_or(false),
                 _ => true,
             };
             let plugin = plugin_registry.get_plugin(&metadata.name).unwrap();
@@ -814,6 +857,23 @@ fn main() -> Result<ExitCode> {
             anyhow::bail!(
                 "Unknown plugin: {} (valid: {})",
                 plugin,
+                plugin_registry
+                    .get_all_metadata()
+                    .iter()
+                    .map(|m| m.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }
+    }
+
+    if let Some(ref only_plugin) = args.only {
+        if plugin_registry.get_plugin(only_plugin).is_some() {
+            config.only_plugin = Some(only_plugin.clone());
+        } else {
+            anyhow::bail!(
+                "Unknown plugin: {} (valid: {})",
+                only_plugin,
                 plugin_registry
                     .get_all_metadata()
                     .iter()
@@ -902,7 +962,9 @@ fn main() -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    if actions.is_empty() {
+    if let Some(ref only_plugin) = config.only_plugin {
+        actions.push(only_plugin.clone());
+    } else if actions.is_empty() {
         if config.plugins_enabled.os.unwrap_or(true) {
             actions.push("os".to_string());
         }
@@ -921,6 +983,27 @@ fn main() -> Result<ExitCode> {
         if config.plugins_enabled.pip.unwrap_or(false) && insights.has_pip {
             actions.push("pip".to_string());
         }
+        if config.plugins_enabled.rustup.unwrap_or(true) && insights.has_rustup {
+            actions.push("rustup".to_string());
+        }
+        if config.plugins_enabled.flatpak.unwrap_or(false) && insights.has_flatpak {
+            actions.push("flatpak".to_string());
+        }
+        if config.plugins_enabled.snap.unwrap_or(false) && insights.has_snap {
+            actions.push("snap".to_string());
+        }
+        if config.plugins_enabled.vscode.unwrap_or(true) && insights.has_vscode {
+            actions.push("vscode".to_string());
+        }
+        if config.plugins_enabled.docker.unwrap_or(false) && insights.has_docker {
+            actions.push("docker".to_string());
+        }
+        if config.plugins_enabled.gem.unwrap_or(true) && insights.has_gem {
+            actions.push("gem".to_string());
+        }
+        if config.plugins_enabled.deno.unwrap_or(true) && insights.has_deno {
+            actions.push("deno".to_string());
+        }
         if config.plugins_enabled.uv.unwrap_or(false) && insights.has_uv {
             actions.extend_from_slice(&["uv".to_string(), "uv-save".to_string()]);
         }
@@ -929,38 +1012,54 @@ fn main() -> Result<ExitCode> {
 
     logger.log(&format!("{} Main → Start", config.app_name));
 
-    let mut success_count = 0u32;
-    let mut fail_count = 0u32;
+    let mut results: Vec<(&str, bool)> = Vec::new();
 
     for action in &actions {
         match action.as_str() {
             "trim-logfile" => {
-                trim_logfile(&config, &mut logger)?;
-                success_count += 1;
+                let r = trim_logfile(&config, &mut logger);
+                results.push((action, r.is_ok()));
             }
             _ => {
-                if let Err(e) = rt.block_on(plugin_registry.execute_action(
+                let r = rt.block_on(plugin_registry.execute_action(
                     action,
                     &config,
                     &insights,
                     &mut logger,
-                )) {
+                ));
+                results.push((action, r.is_ok()));
+                if let Err(e) = r {
                     logger.error(&e.to_string());
-                    fail_count += 1;
-                } else {
-                    success_count += 1;
                 }
             }
         }
     }
 
-    logger.log(&format!(
-        "{} Main → End — {} succeeded, {} failed",
-        config.app_name, success_count, fail_count
-    ));
+    logger.log(&format!("{} Main → End", config.app_name));
+
+    if config.show_header {
+        let success_count = results.iter().filter(|(_, s)| *s).count();
+        let fail_count = results.iter().filter(|(_, s)| !*s).count();
+        logger.log(&format!(
+            "{}   {} succeeded, {} failed",
+            config.app_name, success_count, fail_count
+        ));
+        if !results.is_empty() {
+            logger.log(&format!("{}   Summary:", config.app_name));
+            for (action, ok) in &results {
+                let status = if *ok { "OK" } else { "FAIL" };
+                logger.log(&format!(
+                    "{}     {:<25} {}",
+                    config.app_name, action, status
+                ));
+            }
+        }
+    }
+
+    let fail_count = results.iter().filter(|(_, s)| !*s).count();
 
     if fail_count > 0 {
-        notify_result(&config, &insights, fail_count);
+        notify_result(&config, &insights, fail_count as u32);
         Ok(ExitCode::FAILURE)
     } else {
         notify_result(&config, &insights, 0);

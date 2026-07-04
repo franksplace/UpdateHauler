@@ -1,20 +1,34 @@
 pub mod brew;
 pub mod cargo;
+pub mod deno;
+pub mod docker;
+pub mod flatpak;
+pub mod gem;
 pub mod npm;
 pub mod nvim;
 pub mod os;
 pub mod pip;
 pub mod run;
+pub mod rustup;
+pub mod snap;
 pub mod uv;
+pub mod vscode;
 
 pub use brew::BrewPlugin;
 pub use cargo::CargoPlugin;
+pub use deno::DenoPlugin;
+pub use docker::DockerPlugin;
+pub use flatpak::FlatpakPlugin;
+pub use gem::GemPlugin;
 pub use npm::NpmPlugin;
 pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use pip::PipPlugin;
 pub use run::RunPlugin;
+pub use rustup::RustupPlugin;
+pub use snap::SnapPlugin;
 pub use uv::UvPlugin;
+pub use vscode::VscodePlugin;
 
 use anyhow::Result;
 use async_trait::async_trait;

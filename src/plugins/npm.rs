@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
 use anyhow::Result;
+use duct::cmd;
 
 pub struct NpmPlugin;
 
@@ -63,13 +64,17 @@ impl Plugin for NpmPlugin {
 
         self.update(config, insights, logger).await?;
 
-        super::run_cmd(
-            config,
-            logger,
-            true,
-            "npm",
-            &["list", "-g", "--depth=0", "--json"],
-        )?;
+        let output = cmd("npm", &["list", "-g", "--depth=0", "--json"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()?;
+
+        if !output.stdout.is_empty() {
+            std::fs::write(&npm_file, &output.stdout)?;
+        }
+        if !output.stderr.is_empty() {
+            logger.log(&String::from_utf8_lossy(&output.stderr));
+        }
 
         logger.log("Success savefile written");
 
@@ -94,7 +99,21 @@ impl Plugin for NpmPlugin {
 
         logger.log(&format!("Restoring npm global packages from {}", npm_file));
 
-        super::run_cmd(config, logger, true, "npm", &["install", "-g"])?;
+        let content = std::fs::read_to_string(&npm_file)?;
+        let json: serde_json::Value = serde_json::from_str(&content)?;
+
+        if let Some(deps) = json.get("dependencies").and_then(|d| d.as_object()) {
+            let packages: Vec<&str> = deps.keys().map(|k| k.as_str()).collect();
+            if !packages.is_empty() {
+                let mut args: Vec<&str> = vec!["install", "-g"];
+                args.extend(packages);
+                super::run_cmd(config, logger, true, "npm", &args)?;
+            } else {
+                logger.log("No packages found in save file");
+            }
+        } else {
+            logger.log("No dependencies found in save file");
+        }
 
         Ok(())
     }
