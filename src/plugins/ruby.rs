@@ -42,7 +42,12 @@ impl Plugin for RubyPlugin {
         insights.has_gem
     }
 
-    async fn update(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn update(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         super::run_cmd(config, logger, true, "gem", &["update", "--system"])?;
         super::run_cmd(config, logger, true, "gem", &["update"])?;
         super::run_cmd(config, logger, true, "gem", &["cleanup"])?;
@@ -60,10 +65,18 @@ impl Plugin for RubyPlugin {
         Ok(())
     }
 
-    async fn restore(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn restore(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         let gem_file = config.gem_file.to_string_lossy().to_string();
         if !config.gem_file.exists() {
-            logger.error(&format!("missing dependency — {} gem's backup file is not found", gem_file));
+            logger.error(&format!(
+                "missing dependency — {} gem's backup file is not found",
+                gem_file
+            ));
             return Ok(());
         }
         logger.log(&format!("Restoring Ruby gems from {}", gem_file));

@@ -4,7 +4,8 @@ pub mod deno;
 pub mod docker;
 pub mod flatpak;
 pub mod gem;
-pub mod go;pub mod npm;
+pub mod go;
+pub mod npm;
 pub mod nvim;
 pub mod os;
 pub mod pip;
@@ -14,18 +15,19 @@ pub mod rustup;
 pub mod snap;
 pub mod uv;
 pub mod vscode;
+pub mod yarn;
 
+use anyhow::Result;
+use async_trait::async_trait;
 pub use brew::BrewPlugin;
 pub use cargo::CargoPlugin;
 pub use deno::DenoPlugin;
 pub use docker::DockerPlugin;
+use duct::cmd;
 pub use flatpak::FlatpakPlugin;
 pub use gem::GemPlugin;
-pub mod yarn;
-
-pub use brew::BrewPlugin;
-pub use cargo::CargoPlugin;
-pub use go::GoPlugin;pub use npm::NpmPlugin;
+pub use go::GoPlugin;
+pub use npm::NpmPlugin;
 pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use pip::PipPlugin;
@@ -33,13 +35,10 @@ pub use ruby::RubyPlugin;
 pub use run::RunPlugin;
 pub use rustup::RustupPlugin;
 pub use snap::SnapPlugin;
+use std::collections::HashSet;
 pub use uv::UvPlugin;
 pub use vscode::VscodePlugin;
 pub use yarn::YarnPlugin;
-use anyhow::Result;
-use async_trait::async_trait;
-use duct::cmd;
-use std::collections::HashSet;
 
 use crate::config::Config;
 use crate::insights::Insights;
@@ -240,7 +239,6 @@ impl<'a> PluginRegistry<'a> {
             suggestion
         )
     }
-
 }
 
 pub(crate) fn run_cmd(

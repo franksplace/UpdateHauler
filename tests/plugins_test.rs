@@ -4,7 +4,6 @@ mod tests {
     use updatehauler::config::Config;
     use updatehauler::insights::Insights;
     use updatehauler::logger::Logger;
-    #[allow(unused_imports)]
     use updatehauler::plugins::{
         BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NpmPlugin,
         NvimPlugin, OsPlugin, PipPlugin, Plugin, PluginRegistry, RustupPlugin, SnapPlugin,

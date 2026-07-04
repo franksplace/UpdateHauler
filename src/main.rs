@@ -15,14 +15,12 @@ use updatehauler::scheduler::Scheduler;
 use updatehauler::self_install::SelfInstaller;
 use updatehauler::{
     plugins::BrewPlugin, plugins::CargoPlugin, plugins::DenoPlugin, plugins::DockerPlugin,
-    plugins::FlatpakPlugin, plugins::GemPlugin, plugins::NpmPlugin, plugins::NvimPlugin,
-    plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType, plugins::PluginRegistry,
-    plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin, plugins::UvPlugin,
-    plugins::VscodePlugin, register_plugins,
-    plugins::BrewPlugin, plugins::CargoPlugin, plugins::GoPlugin, plugins::NpmPlugin,
+    plugins::FlatpakPlugin, plugins::GemPlugin, plugins::GoPlugin, plugins::NpmPlugin,
     plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType,
-    plugins::PluginRegistry, plugins::RubyPlugin, plugins::RunPlugin, plugins::UvPlugin,
-    plugins::YarnPlugin, register_plugins,};
+    plugins::PluginRegistry, plugins::RubyPlugin, plugins::RunPlugin, plugins::RustupPlugin,
+    plugins::SnapPlugin, plugins::UvPlugin, plugins::VscodePlugin, plugins::YarnPlugin,
+    register_plugins,
+};
 
 fn build_help_text() -> &'static str {
     let mut help = String::from(
@@ -168,7 +166,8 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         DockerPlugin,
         FlatpakPlugin,
         GemPlugin,
-        GoPlugin,        NpmPlugin,
+        GoPlugin,
+        NpmPlugin,
         NvimPlugin,
         OsPlugin,
         PipPlugin,
@@ -177,9 +176,9 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         RustupPlugin,
         SnapPlugin,
         UvPlugin,
-        VscodePlugin
-        UvPlugin,
-        YarnPlugin    );
+        VscodePlugin,
+        YarnPlugin,
+    );
     registry
 }
 
@@ -190,7 +189,7 @@ fn generate_custom_bash_completion(config: &Config) -> String {
 
 _{app_name}() {{
     local cur prev words cword
-    local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode init schedule install update remove install-completions trim-logfile"
+    local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore ruby ruby-save ruby-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
     local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
@@ -614,6 +613,9 @@ struct Args {
             "docker",
             "flatpak",
             "gem",
+            "go",
+            "go-save",
+            "go-restore",
             "nvim",
             "nvim-save",
             "nvim-restore",
@@ -627,6 +629,9 @@ struct Args {
             "pip",
             "pip-save",
             "pip-restore",
+            "ruby",
+            "ruby-save",
+            "ruby-restore",
             "run",
             "rustup",
             "schedule",
@@ -637,6 +642,9 @@ struct Args {
             "uv-list",
             "uvx",
             "vscode",
+            "yarn",
+            "yarn-save",
+            "yarn-restore",
             "init",
             "install",
             "update",
@@ -826,7 +834,8 @@ fn main() -> Result<ExitCode> {
                 "vscode" => config.plugins_enabled.vscode.unwrap_or(false),
                 "yarn" => config.plugins_enabled.yarn.unwrap_or(false),
                 "go" => config.plugins_enabled.go.unwrap_or(false),
-                "ruby" => config.plugins_enabled.gem.unwrap_or(false),                _ => true,
+                "ruby" => config.plugins_enabled.gem.unwrap_or(false),
+                _ => true,
             };
             let plugin = plugin_registry.get_plugin(&metadata.name).unwrap();
             let available = rt.block_on(plugin.check_available(&config, &insights));

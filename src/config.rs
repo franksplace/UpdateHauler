@@ -91,10 +91,8 @@ plugins:
   # Enable or disable Yarn plugin
   yarn: false
   # Enable or disable Go module plugin
-  go: false
-  # Enable or disable Ruby gems plugin
-  gem: false"#
-    .to_string()
+  go: false"#
+        .to_string()
 }
 
 pub fn validate_schedule_value(value: &str, field: &str) -> Result<()> {
@@ -165,7 +163,7 @@ pub struct PluginConfig {
     pub deno: Option<bool>,
     pub yarn: Option<bool>,
     pub go: Option<bool>,
-    pub gem: Option<bool>,}
+}
 
 #[derive(Clone)]
 pub struct Config {
@@ -250,7 +248,7 @@ impl Config {
                 deno: Some(true),
                 yarn: Some(false),
                 go: Some(false),
-                gem: Some(false),            },
+            },
             cmd_args: Vec::new(),
             only_plugin: None,
         }
@@ -387,7 +385,7 @@ impl Config {
             "deno" => self.plugins_enabled.deno = Some(enabled),
             "yarn" => self.plugins_enabled.yarn = Some(enabled),
             "go" => self.plugins_enabled.go = Some(enabled),
-            "gem" => self.plugins_enabled.gem = Some(enabled),            _ => {}
+            _ => {}
         }
     }
 

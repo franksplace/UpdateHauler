@@ -42,10 +42,17 @@ impl Plugin for GoPlugin {
         insights.has_go
     }
 
-    async fn update(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn update(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         super::run_cmd(config, logger, true, "go", &["version"])?;
         logger.log("Go updates — upgrade Go toolchain via your package manager or download from https://go.dev/dl");
-        logger.log("Go binaries installed via 'go install' — run 'go install <path>@latest' for each");
+        logger.log(
+            "Go binaries installed via 'go install' — run 'go install <path>@latest' for each",
+        );
         Ok(())
     }
 
@@ -55,15 +62,32 @@ impl Plugin for GoPlugin {
             std::fs::create_dir_all(parent)?;
         }
         logger.log(&format!("Saving Go binaries list to {}", go_file));
-        super::run_cmd(config, logger, true, "sh", &["-c", "ls -1 $(go env GOPATH)/bin 2>/dev/null || echo '(no binaries in GOPATH/bin)'"])?;
+        super::run_cmd(
+            config,
+            logger,
+            true,
+            "sh",
+            &[
+                "-c",
+                "ls -1 $(go env GOPATH)/bin 2>/dev/null || echo '(no binaries in GOPATH/bin)'",
+            ],
+        )?;
         logger.log("Success savefile written");
         Ok(())
     }
 
-    async fn restore(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn restore(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         let go_file = config.go_file.to_string_lossy().to_string();
         if !config.go_file.exists() {
-            logger.error(&format!("missing dependency — {} go's backup file is not found", go_file));
+            logger.error(&format!(
+                "missing dependency — {} go's backup file is not found",
+                go_file
+            ));
             return Ok(());
         }
         logger.log(&format!("Restoring Go binaries from {}", go_file));

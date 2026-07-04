@@ -26,7 +26,7 @@ pub struct Insights {
     pub vscode_bin: Option<String>,
     pub has_yarn: bool,
     pub has_go: bool,
-    pub has_gem: bool,    pub app_abspath: PathBuf,
+    pub app_abspath: PathBuf,
 }
 
 impl Insights {
@@ -82,7 +82,6 @@ impl Insights {
             .map(|p| p.to_string_lossy().to_string());
         let has_yarn = which("yarn").is_ok();
         let has_go = which("go").is_ok();
-        let has_gem = which("gem").is_ok();
         let app_abspath =
             std::env::current_exe().with_context(|| "Failed to get executable path")?;
 
@@ -109,7 +108,7 @@ impl Insights {
             vscode_bin,
             has_yarn,
             has_go,
-            has_gem,            app_abspath,
+            app_abspath,
         })
     }
 

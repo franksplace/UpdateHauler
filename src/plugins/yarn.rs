@@ -42,7 +42,12 @@ impl Plugin for YarnPlugin {
         insights.has_yarn
     }
 
-    async fn update(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn update(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         super::run_cmd(config, logger, true, "yarn", &["global", "upgrade"])?;
         Ok(())
     }
@@ -58,14 +63,27 @@ impl Plugin for YarnPlugin {
         Ok(())
     }
 
-    async fn restore(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn restore(
+        &self,
+        config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
         let yarn_file = config.yarn_file.to_string_lossy().to_string();
         if !config.yarn_file.exists() {
-            logger.error(&format!("missing dependency — {} yarn's backup file is not found", yarn_file));
+            logger.error(&format!(
+                "missing dependency — {} yarn's backup file is not found",
+                yarn_file
+            ));
             return Ok(());
         }
-        logger.log(&format!("Restoring yarn global packages from {}", yarn_file));
-        logger.log("yarn global packages must be reinstalled manually — run: yarn global add <package>");
+        logger.log(&format!(
+            "Restoring yarn global packages from {}",
+            yarn_file
+        ));
+        logger.log(
+            "yarn global packages must be reinstalled manually — run: yarn global add <package>",
+        );
         Ok(())
     }
 }
