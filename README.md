@@ -644,7 +644,17 @@ Triggered on: Push to `main` branch
   - Tests dry-run with backup commands
   - Tests dry-run with custom schedule times
   - Verifies dry-run doesn't modify system
+- **Publish to crates.io**: After all tests pass, publishes the crate to [crates.io](https://crates.io/crates/updatehauler)
 - Validates on both Ubuntu and macOS
+
+### Required Secret: `CARGO_REGISTRY_TOKEN`
+
+To enable publishing to crates.io, add your crates.io API token as a repository secret:
+
+1. Log in to [crates.io](https://crates.io) and go to **Account Settings** → **API Tokens**
+2. Generate a new token with the appropriate scope
+3. In your GitHub repository, go to **Settings** → **Secrets and variables** → **Actions**
+4. Click **New repository secret** and add `CARGO_REGISTRY_TOKEN` with the value from step 2
 
 ## Building from Source
 
@@ -693,6 +703,15 @@ This test suite validates:
 - Multiple action execution
 
 The release binary will be located at `target/release/updatehauler`.
+
+## Release Process
+
+1. **Bump the version** — update `version` in [`Cargo.toml`](Cargo.toml) (e.g. `version = "0.4.0"`)
+2. **Update the changelog** — move entries from `[Unreleased]` into a new dated section in [`CHANGELOG.md`](CHANGELOG.md)
+3. **Update test version check** — change the hardcoded version string in [`test_release.sh:76`](test_release.sh) to match the new version
+4. **Commit and tag** — `git commit -am "chore: release v0.4.0" && git tag v0.4.0`
+5. **Push to main** — `git push origin main --tags`
+6. **CI does the rest** — the release workflow builds, tests, runs the release test suite, and publishes to crates.io automatically
 
 ## Security
 
