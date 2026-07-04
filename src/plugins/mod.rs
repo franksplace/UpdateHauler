@@ -1,20 +1,26 @@
 pub mod brew;
 pub mod cargo;
+pub mod go;
 pub mod npm;
 pub mod nvim;
 pub mod os;
 pub mod pip;
+pub mod ruby;
 pub mod run;
 pub mod uv;
+pub mod yarn;
 
 pub use brew::BrewPlugin;
 pub use cargo::CargoPlugin;
+pub use go::GoPlugin;
 pub use npm::NpmPlugin;
 pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use pip::PipPlugin;
+pub use ruby::RubyPlugin;
 pub use run::RunPlugin;
 pub use uv::UvPlugin;
+pub use yarn::YarnPlugin;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -221,32 +227,6 @@ impl<'a> PluginRegistry<'a> {
         )
     }
 
-    #[allow(dead_code)]
-    pub async fn run_available_plugins(
-        &self,
-        action: &str,
-        config: &Config,
-        insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        for plugin in &self.plugins {
-            if plugin.check_available(config, insights).await {
-                match action {
-                    "update" => {
-                        plugin.update(config, insights, logger).await?;
-                    }
-                    "save" => {
-                        plugin.save(config, insights, logger).await?;
-                    }
-                    "restore" => {
-                        plugin.restore(config, insights, logger).await?;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
 pub(crate) fn run_cmd(

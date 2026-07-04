@@ -14,9 +14,10 @@ use updatehauler::logger::Logger;
 use updatehauler::scheduler::Scheduler;
 use updatehauler::self_install::SelfInstaller;
 use updatehauler::{
-    plugins::BrewPlugin, plugins::CargoPlugin, plugins::NpmPlugin, plugins::NvimPlugin,
-    plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType, plugins::PluginRegistry,
-    plugins::RunPlugin, plugins::UvPlugin, register_plugins,
+    plugins::BrewPlugin, plugins::CargoPlugin, plugins::GoPlugin, plugins::NpmPlugin,
+    plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType,
+    plugins::PluginRegistry, plugins::RubyPlugin, plugins::RunPlugin, plugins::UvPlugin,
+    plugins::YarnPlugin, register_plugins,
 };
 
 fn build_help_text() -> &'static str {
@@ -158,12 +159,15 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         registry,
         BrewPlugin,
         CargoPlugin,
+        GoPlugin,
         NpmPlugin,
         NvimPlugin,
         OsPlugin,
         PipPlugin,
+        RubyPlugin,
         RunPlugin,
-        UvPlugin
+        UvPlugin,
+        YarnPlugin
     );
     registry
 }
@@ -776,6 +780,9 @@ fn main() -> Result<ExitCode> {
                 "os" => config.plugins_enabled.os.unwrap_or(false),
                 "pip" => config.plugins_enabled.pip.unwrap_or(false),
                 "uv" => config.plugins_enabled.uv.unwrap_or(false),
+                "yarn" => config.plugins_enabled.yarn.unwrap_or(false),
+                "go" => config.plugins_enabled.go.unwrap_or(false),
+                "ruby" => config.plugins_enabled.gem.unwrap_or(false),
                 _ => true,
             };
             let plugin = plugin_registry.get_plugin(&metadata.name).unwrap();
@@ -923,6 +930,15 @@ fn main() -> Result<ExitCode> {
         }
         if config.plugins_enabled.uv.unwrap_or(false) && insights.has_uv {
             actions.extend_from_slice(&["uv".to_string(), "uv-save".to_string()]);
+        }
+        if config.plugins_enabled.yarn.unwrap_or(false) && insights.has_yarn {
+            actions.push("yarn".to_string());
+        }
+        if config.plugins_enabled.go.unwrap_or(false) && insights.has_go {
+            actions.push("go".to_string());
+        }
+        if config.plugins_enabled.gem.unwrap_or(false) && insights.has_gem {
+            actions.push("ruby".to_string());
         }
         actions.push("trim-logfile".to_string());
     }

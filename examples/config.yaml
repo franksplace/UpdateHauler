@@ -66,3 +66,11 @@ plugins:
   os: true
   # Enable or disable pip plugin
   pip: true
+  # Enable or disable uv plugin
+  uv: true
+  # Enable or disable Yarn plugin
+  yarn: false
+  # Enable or disable Go module plugin
+  go: false
+  # Enable or disable Ruby gems plugin
+  gem: false

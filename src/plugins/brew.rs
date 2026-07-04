@@ -49,6 +49,16 @@ impl Plugin for BrewPlugin {
                     description: "Upgrade only pinned brew formulas".to_string(),
                     action_type: None,
                 },
+                PluginAction {
+                    name: "brew-info".to_string(),
+                    description: "Show information about a brew formula or cask".to_string(),
+                    action_type: None,
+                },
+                PluginAction {
+                    name: "brew-search".to_string(),
+                    description: "Search for brew formulas and casks".to_string(),
+                    action_type: None,
+                },
             ],
         }
     }
@@ -71,6 +81,16 @@ impl Plugin for BrewPlugin {
             }
             "brew-upgrade-pinned" => {
                 super::run_cmd(config, logger, true, "brew", &["upgrade", "--pinned"])?;
+                Ok(true)
+            }
+            "brew-info" => {
+                logger.log("Usage: updatehauler run --cmd \"brew info <formula>\"");
+                logger.log("Or directly: brew info <formula>");
+                Ok(true)
+            }
+            "brew-search" => {
+                logger.log("Usage: updatehauler run --cmd \"brew search <term>\"");
+                logger.log("Or directly: brew search <term>");
                 Ok(true)
             }
             _ => Ok(false),

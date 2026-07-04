@@ -74,6 +74,12 @@ plugins:
   pip: true
   # Enable or disable uv plugin
   uv: true
+  # Enable or disable Yarn plugin
+  yarn: false
+  # Enable or disable Go module plugin
+  go: false
+  # Enable or disable Ruby gems plugin
+  gem: false
 "#
     .to_string()
 }
@@ -137,6 +143,9 @@ pub struct PluginConfig {
     pub npm: Option<bool>,
     pub pip: Option<bool>,
     pub uv: Option<bool>,
+    pub yarn: Option<bool>,
+    pub go: Option<bool>,
+    pub gem: Option<bool>,
 }
 
 #[derive(Clone)]
@@ -165,6 +174,9 @@ pub struct Config {
     pub npm_file: PathBuf,
     pub pip_file: PathBuf,
     pub uv_file: PathBuf,
+    pub yarn_file: PathBuf,
+    pub go_file: PathBuf,
+    pub gem_file: PathBuf,
     pub plugins_enabled: PluginConfig,
     pub cmd_args: Vec<String>,
 }
@@ -198,6 +210,9 @@ impl Config {
             npm_file: PathBuf::new(),
             pip_file: PathBuf::new(),
             uv_file: PathBuf::new(),
+            yarn_file: PathBuf::new(),
+            go_file: PathBuf::new(),
+            gem_file: PathBuf::new(),
             plugins_enabled: PluginConfig {
                 brew: Some(true),
                 cargo: Some(true),
@@ -206,6 +221,9 @@ impl Config {
                 npm: Some(true),
                 pip: Some(true),
                 uv: Some(true),
+                yarn: Some(false),
+                go: Some(false),
+                gem: Some(false),
             },
             cmd_args: Vec::new(),
         }
@@ -333,6 +351,9 @@ impl Config {
             "os" => self.plugins_enabled.os = Some(enabled),
             "pip" => self.plugins_enabled.pip = Some(enabled),
             "uv" => self.plugins_enabled.uv = Some(enabled),
+            "yarn" => self.plugins_enabled.yarn = Some(enabled),
+            "go" => self.plugins_enabled.go = Some(enabled),
+            "gem" => self.plugins_enabled.gem = Some(enabled),
             _ => {}
         }
     }

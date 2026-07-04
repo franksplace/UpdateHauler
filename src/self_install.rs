@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
