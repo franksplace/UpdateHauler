@@ -88,7 +88,12 @@ plugins:
   gem: true
   # Enable or disable Deno plugin
   deno: true
-"#
+  # Enable or disable Yarn plugin
+  yarn: false
+  # Enable or disable Go module plugin
+  go: false
+  # Enable or disable Ruby gems plugin
+  gem: false"#
     .to_string()
 }
 
@@ -158,7 +163,9 @@ pub struct PluginConfig {
     pub docker: Option<bool>,
     pub gem: Option<bool>,
     pub deno: Option<bool>,
-}
+    pub yarn: Option<bool>,
+    pub go: Option<bool>,
+    pub gem: Option<bool>,}
 
 #[derive(Clone)]
 pub struct Config {
@@ -186,6 +193,9 @@ pub struct Config {
     pub npm_file: PathBuf,
     pub pip_file: PathBuf,
     pub uv_file: PathBuf,
+    pub yarn_file: PathBuf,
+    pub go_file: PathBuf,
+    pub gem_file: PathBuf,
     pub plugins_enabled: PluginConfig,
     pub cmd_args: Vec<String>,
     pub only_plugin: Option<String>,
@@ -220,6 +230,9 @@ impl Config {
             npm_file: PathBuf::new(),
             pip_file: PathBuf::new(),
             uv_file: PathBuf::new(),
+            yarn_file: PathBuf::new(),
+            go_file: PathBuf::new(),
+            gem_file: PathBuf::new(),
             plugins_enabled: PluginConfig {
                 brew: Some(true),
                 cargo: Some(true),
@@ -235,7 +248,9 @@ impl Config {
                 docker: Some(false),
                 gem: Some(true),
                 deno: Some(true),
-            },
+                yarn: Some(false),
+                go: Some(false),
+                gem: Some(false),            },
             cmd_args: Vec::new(),
             only_plugin: None,
         }
@@ -370,7 +385,9 @@ impl Config {
             "docker" => self.plugins_enabled.docker = Some(enabled),
             "gem" => self.plugins_enabled.gem = Some(enabled),
             "deno" => self.plugins_enabled.deno = Some(enabled),
-            _ => {}
+            "yarn" => self.plugins_enabled.yarn = Some(enabled),
+            "go" => self.plugins_enabled.go = Some(enabled),
+            "gem" => self.plugins_enabled.gem = Some(enabled),            _ => {}
         }
     }
 

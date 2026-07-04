@@ -43,18 +43,6 @@ impl Logger {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn debug(&mut self, msg: &str) {
-        if self.config.debug {
-            self.log(&format!("DEBUG {}", msg));
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn info(&mut self, msg: &str) {
-        self.log(&format!("INFO {}", msg));
-    }
-
     pub fn error(&mut self, msg: &str) {
         self.error_triggered = true;
 
@@ -65,25 +53,6 @@ impl Logger {
         };
 
         self.log(&format!("ERROR {}", colored_msg));
-    }
-
-    #[allow(dead_code)]
-    pub fn cecho(&mut self, color: &str, msg: &str) {
-        let output = if self.config.color {
-            match color {
-                "red" => msg.red().to_string(),
-                "green" => msg.green().to_string(),
-                "yellow" => msg.yellow().to_string(),
-                "blue" => msg.blue().to_string(),
-                "magenta" => msg.magenta().to_string(),
-                "cyan" => msg.cyan().to_string(),
-                _ => msg.to_string(),
-            }
-        } else {
-            msg.to_string()
-        };
-
-        self.log(&output);
     }
 
     fn write_to_log(&self, output: &str) -> Result<()> {

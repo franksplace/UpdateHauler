@@ -23,7 +23,11 @@ UpdateHauler now uses a modular plugin architecture:
 - **Cargo Plugin** - Update installed cargo packages and backup/restore cargo packages. Includes custom actions: `cargo-list`, `cargo-outdated`
 - **Neovim Plugin** - Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug). Includes custom actions: `nvim-list`, `nvim-clean`, `nvim-health`
 - **npm Plugin** - Update globally installed npm packages, save and restore
-- **pip Plugin** - Update pip packages, save and restore
+- **pip Plugin** - Update pip packages, save and restore (auto-detects uv if available)
+- **uv Plugin** - Update uv itself and manage uv-installed tools (uv tool upgrade --all)
+- **Yarn Plugin** - Update globally installed Yarn/PNPM packages
+- **Ruby Plugin** - Update Ruby gems (gem update)
+- **Go Plugin** - Update Go modules and tools (go install)
 
 **OS Package Manager Plugin:**
 - **OS Plugin** - System updates for multiple platforms:
@@ -100,6 +104,10 @@ updatehauler [OPTIONS] [ACTION]...
 | `nvim` | Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug) |
 | `os` | Update OS and app-based packages |
 | `pip` | Update pip packages |
+| `uv` | Update uv itself and upgrade all installed tools |
+| `yarn` | Update globally installed Yarn/PNPM packages |
+| `ruby` | Update Ruby gems |
+| `go` | Update Go modules and tools |
 
 #### Backup/Restore Actions
 
@@ -115,6 +123,14 @@ updatehauler [OPTIONS] [ACTION]...
 | `nvim-restore` | Restore nvim plugins using your configured plugin manager |
 | `pip-save` | Save pip packages to requirements file |
 | `pip-restore` | Restore pip packages from requirements file |
+| `uv-save` | Save installed uv tools list to JSON |
+| `uv-restore` | Restore uv tools from saved JSON |
+| `yarn-save` | Save globally installed Yarn/PNPM packages to JSON |
+| `yarn-restore` | Restore Yarn/PNPM packages from saved JSON |
+| `ruby-save` | Save installed Ruby gems list to file |
+| `ruby-restore` | Restore Ruby gems from saved list |
+| `go-save` | Save installed Go binaries list |
+| `go-restore` | Restore Go tools from saved list |
 
 #### Utility Actions
 
@@ -123,11 +139,15 @@ updatehauler [OPTIONS] [ACTION]...
 | `brew-list` | List all installed brew formulas |
 | `brew-outdated` | Show outdated brew formulas and casks |
 | `brew-upgrade-pinned` | Upgrade only pinned brew formulas |
+| `brew-info` | Show information about a brew formula or cask |
+| `brew-search` | Search for brew formulas and casks |
 | `cargo-list` | List all installed cargo packages |
 | `cargo-outdated` | Show outdated cargo packages (requires `cargo-outdated`) |
 | `nvim-list` | List installed nvim plugins |
 | `nvim-clean` | Clean unused nvim plugins |
 | `nvim-health` | Check nvim plugin health |
+| `uv-list` | List installed uv tools |
+| `uvx` | Run a tool with uvx |
 
 #### Scheduling Actions
 
@@ -162,8 +182,12 @@ When run without actions, updatehauler automatically (controlled by YAML config)
 6. Updates npm global packages (if installed and enabled)
 7. Saves npm configuration (if enabled)
 8. Updates pip packages (if installed and enabled)
-9. Updates Neovim plugins (if enabled)
-10. Trims logfile
+9. Updates uv tools (if installed and enabled)
+10. Updates Yarn/PNPM packages (if installed and enabled)
+11. Updates Go modules and tools (if installed and enabled)
+12. Updates Ruby gems (if installed and enabled)
+13. Updates Neovim plugins (if enabled)
+14. Trims logfile
 
 After all actions complete, a summary is printed showing the number of successful and failed actions. If any action failed, the exit code is non-zero.
 
@@ -363,6 +387,10 @@ plugins:
   npm: true
   os: true
   pip: true
+  uv: true
+  yarn: false
+  go: false
+  gem: false
 ```
 
 **Available YAML Options:**
@@ -389,9 +417,13 @@ plugins:
 | `plugins.brew` | bool | Enable/disable brew plugin |
 | `plugins.cargo` | bool | Enable/disable cargo plugin |
 | `plugins.nvim` | bool | Enable/disable nvim plugin |
-| `plugins.npm` | bool | Enable/disable npm plugin |
 | `plugins.os` | bool | Enable/disable OS plugin |
+| `plugins.npm` | bool | Enable/disable npm plugin |
 | `plugins.pip` | bool | Enable/disable pip plugin |
+| `plugins.uv` | bool | Enable/disable uv plugin |
+| `plugins.yarn` | bool | Enable/disable Yarn plugin |
+| `plugins.go` | bool | Enable/disable Go module plugin |
+| `plugins.gem` | bool | Enable/disable Ruby gems plugin |
 
 **Note:** Command-line options override YAML configuration settings.
 
@@ -472,9 +504,6 @@ updatehauler --dry-run brew brew-save cargo cargo-save
 
 ## What UpdateHauler Does NOT Do
 
-- ❌ Update Yarn/PNPM packages
-- ❌ Update Ruby gems
-- ❌ Update Go modules
 - ❌ Update docker containers
 - ❌ Snap packages (Linux)
 - ❌ Flatpak packages (Linux)
@@ -644,7 +673,17 @@ Triggered on: Push to `main` branch
   - Tests dry-run with backup commands
   - Tests dry-run with custom schedule times
   - Verifies dry-run doesn't modify system
+- **Publish to crates.io**: After all tests pass, publishes the crate to [crates.io](https://crates.io/crates/updatehauler)
 - Validates on both Ubuntu and macOS
+
+### Required Secret: `CARGO_REGISTRY_TOKEN`
+
+To enable publishing to crates.io, add your crates.io API token as a repository secret:
+
+1. Log in to [crates.io](https://crates.io) and go to **Account Settings** → **API Tokens**
+2. Generate a new token with the appropriate scope
+3. In your GitHub repository, go to **Settings** → **Secrets and variables** → **Actions**
+4. Click **New repository secret** and add `CARGO_REGISTRY_TOKEN` with the value from step 2
 
 ## Building from Source
 
@@ -693,6 +732,15 @@ This test suite validates:
 - Multiple action execution
 
 The release binary will be located at `target/release/updatehauler`.
+
+## Release Process
+
+1. **Bump the version** — update `version` in [`Cargo.toml`](Cargo.toml) (e.g. `version = "0.4.0"`)
+2. **Update the changelog** — move entries from `[Unreleased]` into a new dated section in [`CHANGELOG.md`](CHANGELOG.md)
+3. **Update test version check** — change the hardcoded version string in [`test_release.sh:76`](test_release.sh) to match the new version
+4. **Commit and tag** — `git commit -am "chore: release v0.4.0" && git tag v0.4.0`
+5. **Push to main** — `git push origin main --tags`
+6. **CI does the rest** — the release workflow builds, tests, runs the release test suite, and publishes to crates.io automatically
 
 ## Security
 

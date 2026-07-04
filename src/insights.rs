@@ -6,14 +6,9 @@ use which::which;
 pub struct Insights {
     pub is_root: bool,
     pub arch: String,
-    #[allow(dead_code)]
-    pub plat: String,
     pub os: String,
     pub is_linux: bool,
     pub is_darwin: bool,
-    #[allow(dead_code)]
-    pub s_arch: String,
-    #[allow(dead_code)]
     pub linux_full_id: String,
     pub pkg_mgr: Option<String>,
     pub has_brew: bool,
@@ -29,39 +24,20 @@ pub struct Insights {
     pub has_gem: bool,
     pub has_deno: bool,
     pub vscode_bin: Option<String>,
-    pub app_abspath: PathBuf,
+    pub has_yarn: bool,
+    pub has_go: bool,
+    pub has_gem: bool,    pub app_abspath: PathBuf,
 }
 
 impl Insights {
     pub fn new() -> Result<Self> {
         let is_root = nix::unistd::Uid::effective().is_root();
 
-        let arch_str = match std::env::consts::ARCH {
-            "x86_64" => "x86_64".to_string(),
-            "aarch64" => "aarch64".to_string(),
-            "arm" => "armv7l".to_string(),
-            _ => std::env::consts::ARCH.to_string(),
-        };
-
-        let plat = std::env::consts::ARCH.to_string();
+        let arch_str = std::env::consts::ARCH.to_string();
 
         let os = std::env::consts::OS.to_string();
         let is_linux = os == "linux";
         let is_darwin = os == "macos";
-
-        let s_arch = if is_darwin {
-            if plat == "x86_64" {
-                "amd64".to_string()
-            } else {
-                "arm64".to_string()
-            }
-        } else {
-            match plat.as_str() {
-                "aarch64" => "arm64".to_string(),
-                "armv7l" => "armv7".to_string(),
-                _ => "amd64".to_string(),
-            }
-        };
 
         let mut linux_full_id = String::new();
         let mut pkg_mgr: Option<String> = None;
@@ -104,18 +80,18 @@ impl Insights {
             .or_else(|_| which("cursor"))
             .ok()
             .map(|p| p.to_string_lossy().to_string());
-
+        let has_yarn = which("yarn").is_ok();
+        let has_go = which("go").is_ok();
+        let has_gem = which("gem").is_ok();
         let app_abspath =
             std::env::current_exe().with_context(|| "Failed to get executable path")?;
 
         Ok(Self {
             is_root,
             arch: arch_str,
-            plat,
             os,
             is_linux,
             is_darwin,
-            s_arch,
             linux_full_id,
             pkg_mgr,
             has_brew,
@@ -131,7 +107,9 @@ impl Insights {
             has_gem,
             has_deno,
             vscode_bin,
-            app_abspath,
+            has_yarn,
+            has_go,
+            has_gem,            app_abspath,
         })
     }
 

@@ -4,10 +4,11 @@ pub mod deno;
 pub mod docker;
 pub mod flatpak;
 pub mod gem;
-pub mod npm;
+pub mod go;pub mod npm;
 pub mod nvim;
 pub mod os;
 pub mod pip;
+pub mod ruby;
 pub mod run;
 pub mod rustup;
 pub mod snap;
@@ -20,16 +21,21 @@ pub use deno::DenoPlugin;
 pub use docker::DockerPlugin;
 pub use flatpak::FlatpakPlugin;
 pub use gem::GemPlugin;
-pub use npm::NpmPlugin;
+pub mod yarn;
+
+pub use brew::BrewPlugin;
+pub use cargo::CargoPlugin;
+pub use go::GoPlugin;pub use npm::NpmPlugin;
 pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use pip::PipPlugin;
+pub use ruby::RubyPlugin;
 pub use run::RunPlugin;
 pub use rustup::RustupPlugin;
 pub use snap::SnapPlugin;
 pub use uv::UvPlugin;
 pub use vscode::VscodePlugin;
-
+pub use yarn::YarnPlugin;
 use anyhow::Result;
 use async_trait::async_trait;
 use duct::cmd;
@@ -235,32 +241,6 @@ impl<'a> PluginRegistry<'a> {
         )
     }
 
-    #[allow(dead_code)]
-    pub async fn run_available_plugins(
-        &self,
-        action: &str,
-        config: &Config,
-        insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        for plugin in &self.plugins {
-            if plugin.check_available(config, insights).await {
-                match action {
-                    "update" => {
-                        plugin.update(config, insights, logger).await?;
-                    }
-                    "save" => {
-                        plugin.save(config, insights, logger).await?;
-                    }
-                    "restore" => {
-                        plugin.restore(config, insights, logger).await?;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
 pub(crate) fn run_cmd(

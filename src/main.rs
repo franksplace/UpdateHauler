@@ -19,7 +19,10 @@ use updatehauler::{
     plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType, plugins::PluginRegistry,
     plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin, plugins::UvPlugin,
     plugins::VscodePlugin, register_plugins,
-};
+    plugins::BrewPlugin, plugins::CargoPlugin, plugins::GoPlugin, plugins::NpmPlugin,
+    plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType,
+    plugins::PluginRegistry, plugins::RubyPlugin, plugins::RunPlugin, plugins::UvPlugin,
+    plugins::YarnPlugin, register_plugins,};
 
 fn build_help_text() -> &'static str {
     let mut help = String::from(
@@ -165,16 +168,18 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         DockerPlugin,
         FlatpakPlugin,
         GemPlugin,
-        NpmPlugin,
+        GoPlugin,        NpmPlugin,
         NvimPlugin,
         OsPlugin,
         PipPlugin,
+        RubyPlugin,
         RunPlugin,
         RustupPlugin,
         SnapPlugin,
         UvPlugin,
         VscodePlugin
-    );
+        UvPlugin,
+        YarnPlugin    );
     registry
 }
 
@@ -819,7 +824,9 @@ fn main() -> Result<ExitCode> {
                 "snap" => config.plugins_enabled.snap.unwrap_or(false),
                 "uv" => config.plugins_enabled.uv.unwrap_or(false),
                 "vscode" => config.plugins_enabled.vscode.unwrap_or(false),
-                _ => true,
+                "yarn" => config.plugins_enabled.yarn.unwrap_or(false),
+                "go" => config.plugins_enabled.go.unwrap_or(false),
+                "ruby" => config.plugins_enabled.gem.unwrap_or(false),                _ => true,
             };
             let plugin = plugin_registry.get_plugin(&metadata.name).unwrap();
             let available = rt.block_on(plugin.check_available(&config, &insights));
@@ -1006,6 +1013,15 @@ fn main() -> Result<ExitCode> {
         }
         if config.plugins_enabled.uv.unwrap_or(false) && insights.has_uv {
             actions.extend_from_slice(&["uv".to_string(), "uv-save".to_string()]);
+        }
+        if config.plugins_enabled.yarn.unwrap_or(false) && insights.has_yarn {
+            actions.push("yarn".to_string());
+        }
+        if config.plugins_enabled.go.unwrap_or(false) && insights.has_go {
+            actions.push("go".to_string());
+        }
+        if config.plugins_enabled.gem.unwrap_or(false) && insights.has_gem {
+            actions.push("ruby".to_string());
         }
         actions.push("trim-logfile".to_string());
     }
