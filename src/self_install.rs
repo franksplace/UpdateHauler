@@ -75,10 +75,6 @@ impl SelfInstaller {
             return Ok(false);
         }
 
-        if meta1.modified()? == meta2.modified()? && meta1.len() == meta2.len() {
-            return Ok(true);
-        }
-
         let content1 = fs::read(path1)?;
         let content2 = fs::read(path2)?;
 

@@ -7,6 +7,10 @@ mod tests {
         PathBuf::from(env!("CARGO_BIN_EXE_updatehauler"))
     }
 
+    fn is_ci() -> bool {
+        std::env::var("CI").is_ok()
+    }
+
     #[test]
     fn test_schedule_custom_hour_minute() {
         let binary = get_updatehauler_binary();
@@ -15,15 +19,30 @@ mod tests {
             return;
         }
 
-        let output = Command::new(&binary)
-            .args([
+        // On Linux CI, crontab is not available, so test schedule check with --dry-run instead
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec![
+                "--sched-minute",
+                "30",
+                "--sched-hour",
+                "14",
+                "--dry-run",
+                "schedule",
+                "check",
+            ]
+        } else {
+            vec![
                 "--sched-minute",
                 "30",
                 "--sched-hour",
                 "14",
                 "schedule",
                 "enable",
-            ])
+            ]
+        };
+
+        let output = Command::new(&binary)
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -46,8 +65,20 @@ mod tests {
             return;
         }
 
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec![
+                "--sched-day-of-month",
+                "15",
+                "--dry-run",
+                "schedule",
+                "check",
+            ]
+        } else {
+            vec!["--sched-day-of-month", "15", "schedule", "enable"]
+        };
+
         let output = Command::new(&binary)
-            .args(["--sched-day-of-month", "15", "schedule", "enable"])
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -62,8 +93,14 @@ mod tests {
             return;
         }
 
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec!["--sched-month", "12", "--dry-run", "schedule", "check"]
+        } else {
+            vec!["--sched-month", "12", "schedule", "enable"]
+        };
+
         let output = Command::new(&binary)
-            .args(["--sched-month", "12", "schedule", "enable"])
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -78,8 +115,20 @@ mod tests {
             return;
         }
 
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec![
+                "--sched-day-of-week",
+                "MWF",
+                "--dry-run",
+                "schedule",
+                "check",
+            ]
+        } else {
+            vec!["--sched-day-of-week", "MWF", "schedule", "enable"]
+        };
+
         let output = Command::new(&binary)
-            .args(["--sched-day-of-week", "MWF", "schedule", "enable"])
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -94,8 +143,24 @@ mod tests {
             return;
         }
 
-        let output = Command::new(&binary)
-            .args([
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec![
+                "--sched-minute",
+                "45",
+                "--sched-hour",
+                "16",
+                "--sched-day-of-month",
+                "1",
+                "--sched-month",
+                "1",
+                "--sched-day-of-week",
+                "M",
+                "--dry-run",
+                "schedule",
+                "check",
+            ]
+        } else {
+            vec![
                 "--sched-minute",
                 "45",
                 "--sched-hour",
@@ -108,7 +173,11 @@ mod tests {
                 "M",
                 "schedule",
                 "enable",
-            ])
+            ]
+        };
+
+        let output = Command::new(&binary)
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -130,8 +199,14 @@ mod tests {
             return;
         }
 
+        let args = if cfg!(target_os = "linux") && is_ci() {
+            vec!["--dry-run", "schedule", "check"]
+        } else {
+            vec!["schedule", "enable"]
+        };
+
         let output = Command::new(&binary)
-            .args(["schedule", "enable"])
+            .args(&args)
             .output()
             .expect("Failed to execute updatehauler");
 
