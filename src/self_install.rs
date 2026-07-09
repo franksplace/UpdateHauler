@@ -68,6 +68,17 @@ impl SelfInstaller {
     }
 
     pub fn files_equal(path1: &Path, path2: &Path) -> Result<bool> {
+        let meta1 = fs::metadata(path1)?;
+        let meta2 = fs::metadata(path2)?;
+
+        if meta1.len() != meta2.len() {
+            return Ok(false);
+        }
+
+        if meta1.modified()? == meta2.modified()? && meta1.len() == meta2.len() {
+            return Ok(true);
+        }
+
         let content1 = fs::read(path1)?;
         let content2 = fs::read(path2)?;
 

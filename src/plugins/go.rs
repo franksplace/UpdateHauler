@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use duct::cmd;
 
 use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
@@ -62,16 +63,30 @@ impl Plugin for GoPlugin {
             std::fs::create_dir_all(parent)?;
         }
         logger.log(&format!("Saving Go binaries list to {}", go_file));
-        super::run_cmd(
-            config,
-            logger,
-            true,
-            "sh",
-            &[
-                "-c",
-                "ls -1 $(go env GOPATH)/bin 2>/dev/null || echo '(no binaries in GOPATH/bin)'",
-            ],
-        )?;
+
+        let gopath_output = cmd("go", &["env", "GOPATH"]).stdout_capture().run();
+        match gopath_output {
+            Ok(output) => {
+                let gopath = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let bin_dir = std::path::Path::new(&gopath).join("bin");
+                if bin_dir.is_dir() {
+                    let mut entries: Vec<String> = std::fs::read_dir(&bin_dir)?
+                        .filter_map(|e| e.ok())
+                        .filter_map(|e| e.file_name().into_string().ok())
+                        .collect();
+                    entries.sort();
+                    for entry in &entries {
+                        logger.log(entry);
+                    }
+                } else {
+                    logger.log("(no binaries in GOPATH/bin)");
+                }
+            }
+            Err(_) => {
+                logger.log("(no binaries in GOPATH/bin)");
+            }
+        }
+
         logger.log("Success savefile written");
         Ok(())
     }

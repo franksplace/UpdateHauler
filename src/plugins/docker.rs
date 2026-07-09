@@ -65,24 +65,4 @@ impl Plugin for DockerPlugin {
         )?;
         Ok(())
     }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Docker images are managed by docker - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Docker images are managed by docker - no restore needed");
-        Ok(())
-    }
 }

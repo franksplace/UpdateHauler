@@ -9,6 +9,11 @@ use duct::cmd;
 
 pub struct PipPlugin;
 
+#[derive(serde::Deserialize)]
+struct PipOutdatedPackage {
+    name: String,
+}
+
 #[async_trait]
 impl Plugin for PipPlugin {
     fn name(&self) -> &str {
@@ -49,29 +54,46 @@ impl Plugin for PipPlugin {
         insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()> {
-        if insights.has_uv {
-            super::run_cmd(config, logger, true, "uv", &["pip", "list", "--outdated"])?;
-            super::run_cmd(
-                config,
-                logger,
-                false,
-                "sh",
-                &[
-                    "-c",
-                    "uv pip list --outdated --format=columns 2>/dev/null | tail -n +3 | grep -v '^Using' | awk '{print $1}' | xargs -r uv pip install --upgrade --system --break-system-packages 2>&1 || true",
-                ],
-            )?;
+        let (prog, list_args): (&str, &[&str]) = if insights.has_uv {
+            ("uv", &["pip", "list", "--outdated", "--format=json"])
         } else {
-            super::run_cmd(
-                config,
-                logger,
-                true,
-                "sh",
-                &[
-                    "-c",
-                    "pip list --outdated --format=freeze 2>/dev/null | cut -d= -f1 | xargs pip install --upgrade 2>&1 || true",
-                ],
-            )?;
+            ("pip", &["list", "--outdated", "--format=json"])
+        };
+
+        let output = cmd(prog, list_args).stdout_capture().run()?;
+
+        if output.stdout.is_empty() {
+            return Ok(());
+        }
+
+        let packages: Vec<PipOutdatedPackage> = match serde_json::from_slice(&output.stdout) {
+            Ok(pkgs) => pkgs,
+            Err(e) => {
+                logger.error(&format!("Failed to parse outdated package list: {}", e));
+                return Ok(());
+            }
+        };
+
+        if packages.is_empty() {
+            return Ok(());
+        }
+
+        let names: Vec<&str> = packages.iter().map(|p| p.name.as_str()).collect();
+
+        if insights.has_uv {
+            let mut args = vec![
+                "pip",
+                "install",
+                "--upgrade",
+                "--system",
+                "--break-system-packages",
+            ];
+            args.extend(names);
+            super::run_cmd(config, logger, true, "uv", &args)?;
+        } else {
+            let mut args = vec!["install", "--upgrade"];
+            args.extend(names);
+            super::run_cmd(config, logger, true, "pip", &args)?;
         }
 
         Ok(())

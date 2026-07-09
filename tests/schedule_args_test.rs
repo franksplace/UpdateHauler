@@ -4,9 +4,7 @@ mod tests {
     use std::process::Command;
 
     fn get_updatehauler_binary() -> PathBuf {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.push("target/release/updatehauler");
-        path
+        PathBuf::from(env!("CARGO_BIN_EXE_updatehauler"))
     }
 
     #[test]

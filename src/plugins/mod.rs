@@ -9,7 +9,6 @@ pub mod npm;
 pub mod nvim;
 pub mod os;
 pub mod pip;
-pub mod ruby;
 pub mod run;
 pub mod rustup;
 pub mod snap;
@@ -31,7 +30,6 @@ pub use npm::NpmPlugin;
 pub use nvim::NvimPlugin;
 pub use os::OsPlugin;
 pub use pip::PipPlugin;
-pub use ruby::RubyPlugin;
 pub use run::RunPlugin;
 pub use rustup::RustupPlugin;
 pub use snap::SnapPlugin;
@@ -85,14 +83,25 @@ pub trait Plugin: Send + Sync {
     async fn update(&self, config: &Config, insights: &Insights, logger: &mut Logger)
     -> Result<()>;
 
-    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()>;
+    async fn save(
+        &self,
+        _config: &Config,
+        _insights: &Insights,
+        logger: &mut Logger,
+    ) -> Result<()> {
+        logger.log("No save needed for this plugin");
+        Ok(())
+    }
 
     async fn restore(
         &self,
-        config: &Config,
-        insights: &Insights,
+        _config: &Config,
+        _insights: &Insights,
         logger: &mut Logger,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        logger.log("No restore needed for this plugin");
+        Ok(())
+    }
 
     /// Handle custom actions (optional)
     /// Override this method to handle custom actions beyond update/save/restore
@@ -111,16 +120,23 @@ pub trait Plugin: Send + Sync {
 
 pub struct PluginRegistry<'a> {
     pub plugins: Vec<Box<dyn Plugin + 'a>>,
+    metadata_cache: Vec<PluginMetadata>,
 }
 
 impl<'a> PluginRegistry<'a> {
     pub fn new() -> Self {
         Self {
             plugins: Vec::new(),
+            metadata_cache: Vec::new(),
         }
     }
 
     pub fn register(&mut self, plugin: Box<dyn Plugin + 'a>) {
+        let name = plugin.name().to_string();
+        if self.plugins.iter().any(|p| p.name() == name) {
+            return;
+        }
+        self.metadata_cache.push(plugin.get_metadata());
         self.plugins.push(plugin);
     }
 
@@ -143,8 +159,8 @@ impl<'a> PluginRegistry<'a> {
         None
     }
 
-    pub fn get_all_metadata(&self) -> Vec<PluginMetadata> {
-        self.plugins.iter().map(|p| p.get_metadata()).collect()
+    pub fn get_all_metadata(&self) -> &Vec<PluginMetadata> {
+        &self.metadata_cache
     }
 
     /// Find similar action names for helpful error messages
@@ -175,19 +191,19 @@ impl<'a> PluginRegistry<'a> {
     pub fn get_all_action_names(&self) -> Vec<String> {
         let mut action_names = HashSet::new();
         for metadata in self.get_all_metadata() {
-            for action in metadata.actions {
+            for action in &metadata.actions {
                 action_names.insert(action.name.clone());
             }
-            // Add non-plugin commands
-            action_names.insert("install".to_string());
-            action_names.insert("update".to_string());
-            action_names.insert("remove".to_string());
-            action_names.insert("install-completions".to_string());
-            action_names.insert("schedule enable".to_string());
-            action_names.insert("schedule disable".to_string());
-            action_names.insert("schedule check".to_string());
-            action_names.insert("trim-logfile".to_string());
         }
+        // Add non-plugin commands
+        action_names.insert("install".to_string());
+        action_names.insert("update".to_string());
+        action_names.insert("remove".to_string());
+        action_names.insert("install-completions".to_string());
+        action_names.insert("schedule enable".to_string());
+        action_names.insert("schedule disable".to_string());
+        action_names.insert("schedule check".to_string());
+        action_names.insert("trim-logfile".to_string());
         action_names.into_iter().collect()
     }
 
@@ -325,7 +341,7 @@ pub(crate) fn run_cmd(
                     logger.log(&format!("{} → Return code {}", cmd_str, 1));
                 }
             }
-            Ok(())
+            Err(anyhow::anyhow!("{}", e))
         }
     }
 }

@@ -75,7 +75,7 @@ impl Plugin for OsPlugin {
                     ],
                     "apk" => vec![
                         vec!["apk", "update"],
-                        vec!["sh", "-c", "yes | apk -U upgrade"],
+                        vec!["apk", "-y", "upgrade"],
                         vec!["apk", "update"],
                     ],
                     "nix-env" => vec![vec!["nix-channel", "--update"], vec!["nix-env", "-u", "*"]],
@@ -87,19 +87,14 @@ impl Plugin for OsPlugin {
                 };
 
                 for cmd_args in commands {
+                    let (program, args) = cmd_args.split_first().unwrap();
                     if insights.is_root {
-                        let (program, args) = cmd_args.split_first().unwrap();
                         let args: Vec<&str> = args.to_vec();
                         super::run_cmd(config, logger, true, program, &args)?;
                     } else {
-                        let shell_cmd = cmd_args.join(" ");
-                        super::run_cmd(
-                            config,
-                            logger,
-                            true,
-                            "/usr/bin/sudo",
-                            &["/bin/sh", "-c", &shell_cmd],
-                        )?;
+                        let mut sudo_args: Vec<&str> = vec![program];
+                        sudo_args.extend(args);
+                        super::run_cmd(config, logger, true, "/usr/bin/sudo", &sudo_args)?;
                     }
                 }
             } else {
@@ -107,26 +102,6 @@ impl Plugin for OsPlugin {
             }
         }
 
-        Ok(())
-    }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("OS packages are managed by the system package manager - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("OS packages are managed by the system package manager - no restore needed");
         Ok(())
     }
 }

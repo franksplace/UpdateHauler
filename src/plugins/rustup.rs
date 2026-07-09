@@ -39,24 +39,4 @@ impl Plugin for RustupPlugin {
         super::run_cmd(config, logger, true, "rustup", &["update"])?;
         Ok(())
     }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Rust toolchains are managed by rustup - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Rust toolchains are managed by rustup - no restore needed");
-        Ok(())
-    }
 }

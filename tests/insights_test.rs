@@ -14,16 +14,16 @@ mod tests {
     fn test_brew_detection() {
         let insights = Insights::new().expect("Failed to create Insights");
 
-        // Test that has_brew is a boolean (may be true or false depending on system)
-        let _has_brew = insights.has_brew;
+        let has_brew = insights.has_brew;
+        assert!(has_brew == which::which("brew").is_ok());
     }
 
     #[test]
     fn test_cargo_detection() {
         let insights = Insights::new().expect("Failed to create Insights");
 
-        // Test that has_cargo is a boolean (may be true or false depending on system)
-        let _has_cargo = insights.has_cargo;
+        let has_cargo = insights.has_cargo;
+        assert!(has_cargo == which::which("cargo").is_ok());
     }
 
     #[test]

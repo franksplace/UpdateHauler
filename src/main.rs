@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::env;
+use std::sync::OnceLock;
 
 use clap::{CommandFactory, Parser};
 use std::fs::{self, File, OpenOptions};
@@ -8,7 +9,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap_complete::{Shell, generate};
-use updatehauler::config::{Config, generate_sample_yaml, validate_schedule_value};
+use updatehauler::config::{
+    Config, generate_sample_yaml, has_path_traversal, validate_schedule_value,
+};
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
 use updatehauler::scheduler::Scheduler;
@@ -17,12 +20,16 @@ use updatehauler::{
     plugins::BrewPlugin, plugins::CargoPlugin, plugins::DenoPlugin, plugins::DockerPlugin,
     plugins::FlatpakPlugin, plugins::GemPlugin, plugins::GoPlugin, plugins::NpmPlugin,
     plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin, plugins::PluginActionType,
-    plugins::PluginRegistry, plugins::RubyPlugin, plugins::RunPlugin, plugins::RustupPlugin,
-    plugins::SnapPlugin, plugins::UvPlugin, plugins::VscodePlugin, plugins::YarnPlugin,
-    register_plugins,
+    plugins::PluginRegistry, plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin,
+    plugins::UvPlugin, plugins::VscodePlugin, plugins::YarnPlugin, register_plugins,
 };
 
-fn build_help_text() -> &'static str {
+fn get_help_text() -> &'static str {
+    static HELP_TEXT: OnceLock<String> = OnceLock::new();
+    HELP_TEXT.get_or_init(|| build_help_text())
+}
+
+fn build_help_text() -> String {
     let mut help = String::from(
         r#"
 ACTIONS:
@@ -89,7 +96,7 @@ Maintenance Actions:
  "#,
     );
 
-    Box::leak(help.into_boxed_str())
+    help
 }
 
 fn build_plugin_help(plugin_name: &str) -> String {
@@ -171,7 +178,6 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
         NvimPlugin,
         OsPlugin,
         PipPlugin,
-        RubyPlugin,
         RunPlugin,
         RustupPlugin,
         SnapPlugin,
@@ -189,7 +195,7 @@ fn generate_custom_bash_completion(config: &Config) -> String {
 
 _{app_name}() {{
     local cur prev words cword
-    local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore ruby ruby-save ruby-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
+        local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem gem-save gem-restore go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
     local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
@@ -246,6 +252,8 @@ _{app_name}() {{
         'docker:Clean up unused Docker data'
         'flatpak:Update Flatpak applications'
         'gem:Update Ruby gems'
+        'gem-save:Save installed Ruby gems list'
+        'gem-restore:Restore Ruby gems from saved list'
         'nvim:Update Neovim plugins'
         'nvim-save:Save nvim plugin configuration'
         'nvim-restore:Restore nvim plugins'
@@ -429,7 +437,7 @@ fn install_completions(config: &Config, shells: &[&str]) -> Result<()> {
     version = env!("CARGO_PKG_VERSION"),
     about = "System package update manager for macOS and Linux",
     long_about = None,
-    after_help = build_help_text()
+    after_help = get_help_text()
 )]
 struct Args {
     #[arg(long, help = "Enable debug output")]
@@ -613,6 +621,8 @@ struct Args {
             "docker",
             "flatpak",
             "gem",
+            "gem-save",
+            "gem-restore",
             "go",
             "go-save",
             "go-restore",
@@ -629,9 +639,6 @@ struct Args {
             "pip",
             "pip-save",
             "pip-restore",
-            "ruby",
-            "ruby-save",
-            "ruby-restore",
             "run",
             "rustup",
             "schedule",
@@ -686,7 +693,7 @@ fn main() -> Result<ExitCode> {
     config.notify = args.notify;
     if let Some(logfile) = args.logfile {
         let p = PathBuf::from(&logfile);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!("--logfile path contains '..' traversal: {}", logfile);
         }
         config.log = p;
@@ -696,14 +703,14 @@ fn main() -> Result<ExitCode> {
     }
     if let Some(install_dir) = args.installdir {
         let p = PathBuf::from(&install_dir);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!("--installdir path contains '..' traversal: {}", install_dir);
         }
         config.app_install_dir = p;
     }
     if let Some(completions_dir) = args.completionsdir {
         let p = PathBuf::from(&completions_dir);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!(
                 "--completionsdir path contains '..' traversal: {}",
                 completions_dir
@@ -755,7 +762,7 @@ fn main() -> Result<ExitCode> {
     // Override with command line options if provided
     if let Some(brew_file) = args.brew_save_file {
         let p = PathBuf::from(&brew_file);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!(
                 "--brew-save-file path contains '..' traversal: {}",
                 brew_file
@@ -765,7 +772,7 @@ fn main() -> Result<ExitCode> {
     }
     if let Some(cargo_file) = args.cargo_save_file {
         let p = PathBuf::from(&cargo_file);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!(
                 "--cargo-save-file path contains '..' traversal: {}",
                 cargo_file
@@ -775,21 +782,21 @@ fn main() -> Result<ExitCode> {
     }
     if let Some(npm_file) = args.npm_save_file {
         let p = PathBuf::from(&npm_file);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!("--npm-save-file path contains '..' traversal: {}", npm_file);
         }
         config.npm_file = p;
     }
     if let Some(pip_file) = args.pip_save_file {
         let p = PathBuf::from(&pip_file);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!("--pip-save-file path contains '..' traversal: {}", pip_file);
         }
         config.pip_file = p;
     }
     if let Some(uv_file) = args.uv_save_file {
         let p = PathBuf::from(&uv_file);
-        if p.components().any(|c| c == std::path::Component::ParentDir) {
+        if has_path_traversal(&p) {
             anyhow::bail!("--uv-save-file path contains '..' traversal: {}", uv_file);
         }
         config.uv_file = p;
@@ -802,6 +809,13 @@ fn main() -> Result<ExitCode> {
     if let Some(cmd) = args.cmd
         && !cmd.is_empty()
     {
+        let joined = cmd.join(" ");
+        if joined.len() > 4096 {
+            anyhow::bail!("--cmd argument too long (max 4096 bytes)");
+        }
+        if cmd.iter().any(|c| c.contains('\0')) {
+            anyhow::bail!("--cmd argument contains null bytes");
+        }
         config.cmd_args = cmd;
     }
 
@@ -810,7 +824,6 @@ fn main() -> Result<ExitCode> {
     let plugin_registry = create_plugin_registry();
 
     if args.list_plugins {
-        let rt = tokio::runtime::Runtime::new()?;
         println!(
             "{:<20} {:<10} {:<10}  Description",
             "Plugin", "Enabled", "Available"
@@ -834,7 +847,6 @@ fn main() -> Result<ExitCode> {
                 "vscode" => config.plugins_enabled.vscode.unwrap_or(false),
                 "yarn" => config.plugins_enabled.yarn.unwrap_or(false),
                 "go" => config.plugins_enabled.go.unwrap_or(false),
-                "ruby" => config.plugins_enabled.gem.unwrap_or(false),
                 _ => true,
             };
             let plugin = plugin_registry.get_plugin(&metadata.name).unwrap();
@@ -1030,7 +1042,7 @@ fn main() -> Result<ExitCode> {
             actions.push("go".to_string());
         }
         if config.plugins_enabled.gem.unwrap_or(false) && insights.has_gem {
-            actions.push("ruby".to_string());
+            actions.extend_from_slice(&["gem".to_string(), "gem-save".to_string()]);
         }
         actions.push("trim-logfile".to_string());
     }
@@ -1102,12 +1114,14 @@ fn notify_result(config: &Config, insights: &Insights, fail_count: u32) {
         format!("{}: all actions completed successfully", config.app_name)
     };
     if insights.is_darwin {
+        let escaped_msg = msg.replace('\\', "\\\\").replace('"', "\\\"");
+        let escaped_title = config.app_name.replace('\\', "\\\\").replace('"', "\\\"");
         let _ = std::process::Command::new("/usr/bin/osascript")
             .args([
                 "-e",
                 &format!(
                     "display notification \"{}\" with title \"{}\"",
-                    msg, config.app_name
+                    escaped_msg, escaped_title
                 ),
             ])
             .output();
@@ -1145,15 +1159,12 @@ fn trim_logfile(config: &Config, logger: &mut Logger) -> Result<()> {
 
     let file = File::open(log_path)?;
     let reader = BufReader::new(file);
-    let line_count = reader.lines().count();
+    let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
+    let line_count = lines.len();
 
     if line_count <= max_lines {
         return Ok(());
     }
-
-    let file = File::open(log_path)?;
-    let reader = BufReader::new(file);
-    let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
 
     let start = line_count.saturating_sub(max_lines);
     let trimmed: Vec<&String> = lines.iter().skip(start).collect();

@@ -2,8 +2,9 @@ use updatehauler::config::Config;
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
 use updatehauler::plugins::{
-    BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NvimPlugin,
-    OsPlugin, Plugin, PluginActionType, PluginRegistry, RustupPlugin, SnapPlugin, VscodePlugin,
+    BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, GoPlugin,
+    NpmPlugin, NvimPlugin, OsPlugin, PipPlugin, Plugin, PluginActionType, PluginRegistry,
+    RunPlugin, RustupPlugin, SnapPlugin, UvPlugin, VscodePlugin, YarnPlugin,
 };
 
 fn create_test_config() -> Config {
@@ -101,6 +102,9 @@ fn test_plugin_metadata_gem() {
     assert_eq!(metadata.name, "gem");
     assert!(!metadata.description.is_empty());
     assert!(!metadata.actions.is_empty());
+    assert!(metadata.actions.iter().any(|a| a.name == "gem"));
+    assert!(metadata.actions.iter().any(|a| a.name == "gem-save"));
+    assert!(metadata.actions.iter().any(|a| a.name == "gem-restore"));
 }
 
 #[test]
@@ -154,6 +158,76 @@ fn test_plugin_metadata_vscode() {
 }
 
 #[test]
+fn test_plugin_metadata_go() {
+    let go = GoPlugin;
+    let metadata = go.get_metadata();
+
+    assert_eq!(metadata.name, "go");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_npm() {
+    let npm = NpmPlugin;
+    let metadata = npm.get_metadata();
+
+    assert_eq!(metadata.name, "npm");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_pip() {
+    let pip = PipPlugin;
+    let metadata = pip.get_metadata();
+
+    assert_eq!(metadata.name, "pip");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_ruby() {
+    let gem = GemPlugin;
+    let metadata = gem.get_metadata();
+
+    assert_eq!(metadata.name, "gem");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_run() {
+    let run = RunPlugin;
+    let metadata = run.get_metadata();
+
+    assert_eq!(metadata.name, "run");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_uv() {
+    let uv = UvPlugin;
+    let metadata = uv.get_metadata();
+
+    assert_eq!(metadata.name, "uv");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
+fn test_plugin_metadata_yarn() {
+    let yarn = YarnPlugin;
+    let metadata = yarn.get_metadata();
+
+    assert_eq!(metadata.name, "yarn");
+    assert!(!metadata.description.is_empty());
+    assert!(!metadata.actions.is_empty());
+}
+
+#[test]
 fn test_get_action_by_name() {
     let mut registry = PluginRegistry::new();
     registry.register(Box::new(BrewPlugin));
@@ -183,14 +257,20 @@ fn test_get_all_metadata() {
     registry.register(Box::new(DockerPlugin));
     registry.register(Box::new(FlatpakPlugin));
     registry.register(Box::new(GemPlugin));
+    registry.register(Box::new(GoPlugin));
+    registry.register(Box::new(NpmPlugin));
     registry.register(Box::new(NvimPlugin));
     registry.register(Box::new(OsPlugin));
+    registry.register(Box::new(PipPlugin));
+    registry.register(Box::new(RunPlugin));
     registry.register(Box::new(RustupPlugin));
     registry.register(Box::new(SnapPlugin));
+    registry.register(Box::new(UvPlugin));
     registry.register(Box::new(VscodePlugin));
+    registry.register(Box::new(YarnPlugin));
 
     let all_metadata = registry.get_all_metadata();
-    assert_eq!(all_metadata.len(), 11);
+    assert_eq!(all_metadata.len(), 17);
 
     let names: Vec<&str> = all_metadata.iter().map(|m| m.name.as_str()).collect();
     assert!(names.contains(&"brew"));
@@ -199,11 +279,17 @@ fn test_get_all_metadata() {
     assert!(names.contains(&"docker"));
     assert!(names.contains(&"flatpak"));
     assert!(names.contains(&"gem"));
+    assert!(names.contains(&"go"));
+    assert!(names.contains(&"npm"));
     assert!(names.contains(&"nvim"));
     assert!(names.contains(&"os"));
+    assert!(names.contains(&"pip"));
+    assert!(names.contains(&"run"));
     assert!(names.contains(&"rustup"));
     assert!(names.contains(&"snap"));
+    assert!(names.contains(&"uv"));
     assert!(names.contains(&"vscode"));
+    assert!(names.contains(&"yarn"));
 }
 
 #[test]

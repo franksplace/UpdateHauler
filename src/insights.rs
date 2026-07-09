@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::fs;
 use std::path::PathBuf;
 use which::which;
 
@@ -9,7 +10,6 @@ pub struct Insights {
     pub os: String,
     pub is_linux: bool,
     pub is_darwin: bool,
-    pub linux_full_id: String,
     pub pkg_mgr: Option<String>,
     pub has_brew: bool,
     pub has_cargo: bool,
@@ -39,11 +39,10 @@ impl Insights {
         let is_linux = os == "linux";
         let is_darwin = os == "macos";
 
-        let mut linux_full_id = String::new();
         let mut pkg_mgr: Option<String> = None;
 
         if is_linux {
-            linux_full_id = Self::get_linux_id()?;
+            let linux_full_id = Self::get_linux_id()?;
 
             pkg_mgr = match linux_full_id.as_str() {
                 id if id.contains("debian") || id.contains("ubuntu") => Some("apt-get".to_string()),
@@ -91,7 +90,6 @@ impl Insights {
             os,
             is_linux,
             is_darwin,
-            linux_full_id,
             pkg_mgr,
             has_brew,
             has_cargo,
@@ -113,15 +111,36 @@ impl Insights {
     }
 
     fn get_linux_id() -> Result<String> {
-        let output = std::process::Command::new("sh")
-            .arg("-c")
-            .arg("grep -E -h '^(ID=|ID_LIKE)' /etc/*-release 2>/dev/null | cut -d= -f2- | sed -e 's/\"//g' | xargs")
-            .output()?;
+        let mut ids = Vec::new();
+        let release_files = ["/etc/os-release", "/etc/lsb-release"];
 
-        if output.status.success() {
-            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-        } else {
-            Ok(String::new())
+        for path in &release_files {
+            if let Ok(content) = fs::read_to_string(path) {
+                for line in content.lines() {
+                    if let Some(value) = Self::parse_release_line(line, "ID=")
+                        .or_else(|| Self::parse_release_line(line, "ID_LIKE="))
+                    {
+                        for id in value.split_whitespace() {
+                            if !ids.contains(&id.to_string()) {
+                                ids.push(id.to_string());
+                            }
+                        }
+                    }
+                }
+            }
         }
+
+        Ok(ids.join(" "))
+    }
+
+    fn parse_release_line(line: &str, prefix: &str) -> Option<String> {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix(prefix) {
+            let value = rest.trim().trim_matches('"').trim_matches('\'');
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+        None
     }
 }

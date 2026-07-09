@@ -39,24 +39,4 @@ impl Plugin for DenoPlugin {
         super::run_cmd(config, logger, true, "deno", &["upgrade"])?;
         Ok(())
     }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Deno is managed by deno upgrade - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Deno is managed by deno upgrade - no restore needed");
-        Ok(())
-    }
 }

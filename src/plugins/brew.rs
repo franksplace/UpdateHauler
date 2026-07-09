@@ -112,10 +112,16 @@ impl Plugin for BrewPlugin {
         }
 
         super::run_cmd(config, logger, true, "brew", &["update"])?;
-        super::run_cmd(config, logger, true, "brew", &["upgrade"])?;
+        super::run_cmd(config, logger, true, "brew", &["upgrade", "--yes"])?;
         super::run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
-        super::run_cmd(config, logger, false, "brew", &["doctor", "-q"])?;
-        super::run_cmd(config, logger, true, "brew", &["upgrade", "--cask"])?;
+        let _ = super::run_cmd(config, logger, false, "brew", &["doctor", "-q"]);
+        super::run_cmd(
+            config,
+            logger,
+            true,
+            "brew",
+            &["upgrade", "--cask", "--yes"],
+        )?;
         if duct::cmd("brew", &["cu", "--version"])
             .stdout_null()
             .stderr_null()
@@ -131,7 +137,7 @@ impl Plugin for BrewPlugin {
             )?;
         }
         super::run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
-        super::run_cmd(config, logger, false, "brew", &["doctor", "--verbose"])?;
+        let _ = super::run_cmd(config, logger, false, "brew", &["doctor", "--verbose"]);
 
         Ok(())
     }

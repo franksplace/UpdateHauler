@@ -39,24 +39,4 @@ impl Plugin for SnapPlugin {
         super::run_cmd(config, logger, true, "snap", &["refresh"])?;
         Ok(())
     }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Snap packages are managed by snap - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Snap packages are managed by snap - no restore needed");
-        Ok(())
-    }
 }

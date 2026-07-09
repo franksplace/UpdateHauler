@@ -58,7 +58,8 @@ impl<'a> Scheduler<'a> {
 
         let crontab_entry = self.config.crontab_entry(&self.insights.app_abspath);
 
-        if current_tab.contains(&self.insights.app_abspath.to_string_lossy().to_string()) {
+        let app_path = self.insights.app_abspath.to_string_lossy().to_string();
+        if current_tab.lines().any(|line| line.contains(&app_path)) {
             self.logger.log("Cron entry already enabled");
             return Ok(());
         }
@@ -86,7 +87,7 @@ impl<'a> Scheduler<'a> {
 
         let app_path = self.insights.app_abspath.to_string_lossy().to_string();
 
-        if !current_tab.contains(&app_path) {
+        if !current_tab.lines().any(|line| line.contains(&app_path)) {
             self.logger.log("cron entry not found");
             return Ok(());
         }

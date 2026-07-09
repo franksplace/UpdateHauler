@@ -39,24 +39,4 @@ impl Plugin for FlatpakPlugin {
         super::run_cmd(config, logger, true, "flatpak", &["update", "-y"])?;
         Ok(())
     }
-
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Flatpak applications are managed by flatpak - no save needed");
-        Ok(())
-    }
-
-    async fn restore(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Flatpak applications are managed by flatpak - no restore needed");
-        Ok(())
-    }
 }

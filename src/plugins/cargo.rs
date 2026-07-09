@@ -88,9 +88,11 @@ impl Plugin for CargoPlugin {
             return Ok(());
         }
 
-        let _ = cmd("cargo", &["install-update", "--version"])
-            .stdout_null()
-            .run();
+        let check = cmd("cargo", &["install-update", "--version"]).run();
+        if check.is_err() {
+            logger.error("cargo-install-update not found — install it with: cargo install cargo-install-update");
+            return Ok(());
+        }
 
         super::run_cmd(config, logger, true, "cargo", &["install-update", "-a"])?;
 
@@ -108,7 +110,11 @@ impl Plugin for CargoPlugin {
             std::fs::create_dir_all(parent)?;
         }
 
-        let _ = cmd("cargo", &["backup", "--version"]).stdout_null().run();
+        let check = cmd("cargo", &["backup", "--version"]).run();
+        if check.is_err() {
+            logger.error("cargo-backup not found — install it with: cargo install cargo-backup");
+            return Ok(());
+        }
 
         logger.log(&format!("Generating cargo's {} save file", cargo_file));
 
@@ -145,7 +151,11 @@ impl Plugin for CargoPlugin {
             return Ok(());
         }
 
-        let _ = cmd("cargo", &["restore", "--version"]).stdout_null().run();
+        let check = cmd("cargo", &["restore", "--version"]).run();
+        if check.is_err() {
+            logger.error("cargo-restore not found — install it with: cargo install cargo-restore");
+            return Ok(());
+        }
 
         super::run_cmd(
             config,

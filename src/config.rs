@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
 pub fn generate_sample_yaml() -> String {
@@ -112,12 +112,12 @@ pub fn validate_schedule_value(value: &str, field: &str) -> Result<()> {
     Ok(())
 }
 
-fn has_path_traversal(path: &Path) -> bool {
+pub fn has_path_traversal(path: &Path) -> bool {
     path.components()
         .any(|c| c == std::path::Component::ParentDir)
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ConfigFile {
     pub debug: Option<bool>,
     pub datetime: Option<bool>,
@@ -136,7 +136,7 @@ pub struct ConfigFile {
     pub plugins: Option<PluginConfig>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ScheduleConfig {
     pub minute: Option<String>,
     pub hour: Option<String>,
@@ -145,7 +145,7 @@ pub struct ScheduleConfig {
     pub day_of_week: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct PluginConfig {
     pub brew: Option<bool>,
     pub cargo: Option<bool>,
@@ -268,7 +268,7 @@ impl Config {
             .context(format!("Failed to read config file: {:?}", config_file))?;
 
         let config_file_yaml: ConfigFile =
-            serde_yaml::from_str(&config_str).context("Failed to parse YAML configuration")?;
+            serde_saphyr::from_str(&config_str).context("Failed to parse YAML configuration")?;
 
         if let Some(debug) = config_file_yaml.debug {
             config.debug = debug;

@@ -3,18 +3,43 @@ use chrono::Local;
 use colored::Colorize;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::PathBuf;
 
 use crate::config::Config;
 
+struct LoggerConfig {
+    datetime: bool,
+    use_log: bool,
+    color: bool,
+    log: PathBuf,
+}
+
+impl LoggerConfig {
+    fn from_config(config: &Config) -> Self {
+        Self {
+            datetime: config.datetime,
+            use_log: config.use_log,
+            color: config.color,
+            log: config.log.clone(),
+        }
+    }
+}
+
 pub struct Logger {
-    config: Config,
+    config: LoggerConfig,
     error_triggered: bool,
 }
 
 impl Logger {
     pub fn new(config: &Config) -> Self {
+        let log_config = LoggerConfig::from_config(config);
+        if log_config.use_log {
+            if let Some(parent) = log_config.log.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+        }
         Self {
-            config: config.clone(),
+            config: log_config,
             error_triggered: false,
         }
     }
@@ -57,12 +82,6 @@ impl Logger {
 
     fn write_to_log(&self, output: &str) -> Result<()> {
         let log_path = &self.config.log;
-
-        if !log_path.exists()
-            && let Some(parent) = log_path.parent()
-        {
-            std::fs::create_dir_all(parent)?;
-        }
 
         let mut file = OpenOptions::new()
             .create(true)

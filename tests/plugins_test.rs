@@ -5,9 +5,9 @@ mod tests {
     use updatehauler::insights::Insights;
     use updatehauler::logger::Logger;
     use updatehauler::plugins::{
-        BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, NpmPlugin,
-        NvimPlugin, OsPlugin, PipPlugin, Plugin, PluginRegistry, RustupPlugin, SnapPlugin,
-        UvPlugin, VscodePlugin,
+        BrewPlugin, CargoPlugin, DenoPlugin, DockerPlugin, FlatpakPlugin, GemPlugin, GoPlugin,
+        NpmPlugin, NvimPlugin, OsPlugin, PipPlugin, Plugin, PluginRegistry, RunPlugin,
+        RustupPlugin, SnapPlugin, UvPlugin, VscodePlugin, YarnPlugin,
     };
 
     #[test]
@@ -31,11 +31,17 @@ mod tests {
         registry.register(Box::new(DockerPlugin));
         registry.register(Box::new(FlatpakPlugin));
         registry.register(Box::new(GemPlugin));
+        registry.register(Box::new(GoPlugin));
+        registry.register(Box::new(NpmPlugin));
         registry.register(Box::new(NvimPlugin));
         registry.register(Box::new(OsPlugin));
+        registry.register(Box::new(PipPlugin));
+        registry.register(Box::new(RunPlugin));
         registry.register(Box::new(RustupPlugin));
         registry.register(Box::new(SnapPlugin));
+        registry.register(Box::new(UvPlugin));
         registry.register(Box::new(VscodePlugin));
+        registry.register(Box::new(YarnPlugin));
 
         let brew = registry.get_plugin("brew");
         let cargo = registry.get_plugin("cargo");
@@ -43,11 +49,17 @@ mod tests {
         let docker = registry.get_plugin("docker");
         let flatpak = registry.get_plugin("flatpak");
         let gem = registry.get_plugin("gem");
+        let go = registry.get_plugin("go");
+        let npm = registry.get_plugin("npm");
         let nvim = registry.get_plugin("nvim");
         let os = registry.get_plugin("os");
+        let pip = registry.get_plugin("pip");
+        let run = registry.get_plugin("run");
         let rustup = registry.get_plugin("rustup");
         let snap = registry.get_plugin("snap");
+        let uv = registry.get_plugin("uv");
         let vscode = registry.get_plugin("vscode");
+        let yarn = registry.get_plugin("yarn");
         let nonexistent = registry.get_plugin("nonexistent");
 
         assert!(brew.is_some());
@@ -62,16 +74,28 @@ mod tests {
         assert_eq!(flatpak.unwrap().name(), "flatpak");
         assert!(gem.is_some());
         assert_eq!(gem.unwrap().name(), "gem");
+        assert!(go.is_some());
+        assert_eq!(go.unwrap().name(), "go");
+        assert!(npm.is_some());
+        assert_eq!(npm.unwrap().name(), "npm");
         assert!(nvim.is_some());
         assert_eq!(nvim.unwrap().name(), "nvim");
         assert!(os.is_some());
         assert_eq!(os.unwrap().name(), "os");
+        assert!(pip.is_some());
+        assert_eq!(pip.unwrap().name(), "pip");
+        assert!(run.is_some());
+        assert_eq!(run.unwrap().name(), "run");
         assert!(rustup.is_some());
         assert_eq!(rustup.unwrap().name(), "rustup");
         assert!(snap.is_some());
         assert_eq!(snap.unwrap().name(), "snap");
+        assert!(uv.is_some());
+        assert_eq!(uv.unwrap().name(), "uv");
         assert!(vscode.is_some());
         assert_eq!(vscode.unwrap().name(), "vscode");
+        assert!(yarn.is_some());
+        assert_eq!(yarn.unwrap().name(), "yarn");
         assert!(nonexistent.is_none());
     }
 

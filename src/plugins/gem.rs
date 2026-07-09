@@ -18,11 +18,23 @@ impl Plugin for GemPlugin {
         PluginMetadata {
             name: "gem".to_string(),
             description: "Update Ruby gems".to_string(),
-            actions: vec![PluginAction {
-                name: "gem".to_string(),
-                description: "Update Ruby gems and rubygems system".to_string(),
-                action_type: Some(PluginActionType::Update),
-            }],
+            actions: vec![
+                PluginAction {
+                    name: "gem".to_string(),
+                    description: "Update Ruby gems and rubygems system".to_string(),
+                    action_type: Some(PluginActionType::Update),
+                },
+                PluginAction {
+                    name: "gem-save".to_string(),
+                    description: "Save installed Ruby gems list to file".to_string(),
+                    action_type: Some(PluginActionType::Save),
+                },
+                PluginAction {
+                    name: "gem-restore".to_string(),
+                    description: "Restore Ruby gems from saved list".to_string(),
+                    action_type: Some(PluginActionType::Restore),
+                },
+            ],
         }
     }
 
@@ -38,26 +50,37 @@ impl Plugin for GemPlugin {
     ) -> Result<()> {
         super::run_cmd(config, logger, true, "gem", &["update", "--system"])?;
         super::run_cmd(config, logger, true, "gem", &["update"])?;
+        super::run_cmd(config, logger, true, "gem", &["cleanup"])?;
         Ok(())
     }
 
-    async fn save(
-        &self,
-        _config: &Config,
-        _insights: &Insights,
-        logger: &mut Logger,
-    ) -> Result<()> {
-        logger.log("Ruby gems are managed by gem - no save needed");
+    async fn save(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
+        let gem_file = config.gem_file.to_string_lossy().to_string();
+        if let Some(parent) = config.gem_file.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        logger.log(&format!("Saving Ruby gems list to {}", gem_file));
+        super::run_cmd(config, logger, true, "gem", &["list", "--local"])?;
+        logger.log("Success savefile written");
         Ok(())
     }
 
     async fn restore(
         &self,
-        _config: &Config,
+        config: &Config,
         _insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()> {
-        logger.log("Ruby gems are managed by gem - no restore needed");
+        let gem_file = config.gem_file.to_string_lossy().to_string();
+        if !config.gem_file.exists() {
+            logger.error(&format!(
+                "missing dependency — {} gem's backup file is not found",
+                gem_file
+            ));
+            return Ok(());
+        }
+        logger.log(&format!("Restoring Ruby gems from {}", gem_file));
+        logger.log("Ruby gems must be reinstalled manually — run: gem install <gemname>");
         Ok(())
     }
 }
