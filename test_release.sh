@@ -80,20 +80,20 @@ else
 	exit 1
 fi
 
-print_section "6. Testing --run Command"
+print_section "6. Testing run Command"
 
-./target/release/updatehauler --run "echo test" >/tmp/run_output.txt 2>&1
+./target/release/updatehauler run --cmd "echo test" >/tmp/run_output.txt 2>&1
 if grep -q "test" /tmp/run_output.txt &&
 	grep -q "Return code 0" /tmp/run_output.txt; then
-	print_result "--run command"
+	print_result "run command"
 else
-	echo "Error: --run command failed"
+	echo "Error: run command failed"
 	exit 1
 fi
 
 print_section "7. Testing Real-time Output Streaming"
 
-./target/release/updatehauler --run "echo 'line1'; sleep 0.1; echo 'line2'" >/tmp/stream_output.txt 2>&1
+./target/release/updatehauler run --cmd "echo 'line1'; sleep 0.1; echo 'line2'" >/tmp/stream_output.txt 2>&1
 if grep -q "line1" /tmp/stream_output.txt &&
 	grep -q "line2" /tmp/stream_output.txt; then
 	print_result "Real-time output streaming"
@@ -117,7 +117,7 @@ fi
 print_section "9. Testing Flag Combinations"
 
 # Test --no-color
-./target/release/updatehauler --no-color --run "echo test" >/tmp/no_color.txt 2>&1
+./target/release/updatehauler --no-color run --cmd "echo test" >/tmp/no_color.txt 2>&1
 if grep -q "test" /tmp/no_color.txt; then
 	print_result "--no-color flag"
 else
@@ -126,7 +126,7 @@ else
 fi
 
 # Test --no-datetime
-./target/release/updatehauler --no-datetime --run "echo test" >/tmp/no_datetime.txt 2>&1
+./target/release/updatehauler --no-datetime run --cmd "echo test" >/tmp/no_datetime.txt 2>&1
 if ! grep -q "T[0-9]" /tmp/no_datetime.txt && grep -q "test" /tmp/no_datetime.txt; then
 	print_result "--no-datetime flag"
 else
@@ -134,21 +134,22 @@ else
 	exit 1
 fi
 
-# Test --no-header
-./target/release/updatehauler --no-header --run "echo test" >/tmp/no_header.txt 2>&1
+# Test --no-header (suppresses per-command headers, not Main wrapper)
+./target/release/updatehauler --no-header run --cmd "echo test" >/tmp/no_header.txt 2>&1
 if grep -q "test" /tmp/no_header.txt &&
-	! grep -q "→ Start" /tmp/no_header.txt &&
-	! grep -q "→ Return code" /tmp/no_header.txt; then
+	! grep -q "echo test → Start" /tmp/no_header.txt &&
+	! grep -q "echo test → Return code" /tmp/no_header.txt; then
 	print_result "--no-header flag"
 else
 	echo "Error: --no-header flag failed"
+	cat /tmp/no_header.txt
 	exit 1
 fi
 
 print_section "10. Testing Custom File Paths"
 
 # Test --logfile with --logfile-only
-./target/release/updatehauler --logfile /tmp/custom.log --logfile-only --run "echo test" >/tmp/custom_log_output.txt 2>&1
+./target/release/updatehauler --logfile /tmp/custom.log --logfile-only run --cmd "echo test" >/tmp/custom_log_output.txt 2>&1
 if [ -f /tmp/custom.log ] && grep -q "test" /tmp/custom.log; then
 	print_result "--logfile option"
 else
@@ -160,7 +161,7 @@ fi
 rm -f /tmp/custom.log
 
 # Test --max-log-lines
-./target/release/updatehauler --max-log-lines 100 --run "echo test" >/tmp/max_lines.txt 2>&1
+./target/release/updatehauler --max-log-lines 100 run --cmd "echo test" >/tmp/max_lines.txt 2>&1
 if grep -q "Return code 0" /tmp/max_lines.txt; then
 	print_result "--max-log-lines option"
 else
@@ -170,7 +171,7 @@ fi
 
 print_section "11. Testing --installdir"
 
-./target/release/updatehauler --installdir /tmp/test_install --run "echo test" >/tmp/installdir.txt 2>&1
+./target/release/updatehauler --installdir /tmp/test_install run --cmd "echo test" >/tmp/installdir.txt 2>&1
 if grep -q "Return code 0" /tmp/installdir.txt; then
 	print_result "--installdir option"
 else
@@ -215,8 +216,8 @@ fi
 
 print_section "15. Testing Debug Flag"
 
-# Just verify debug flag doesn't cause errors (debug output is for config insights, not --run)
-./target/release/updatehauler --debug --run "echo test" >/tmp/debug_output.txt 2>&1
+# Just verify debug flag doesn't cause errors (debug output is for config insights, not run command)
+./target/release/updatehauler --debug run --cmd "echo test" >/tmp/debug_output.txt 2>&1
 if grep -q "test" /tmp/debug_output.txt &&
 	grep -q "Return code 0" /tmp/debug_output.txt; then
 	print_result "--debug flag"
@@ -229,10 +230,12 @@ print_section "16. Testing Schedule Commands"
 
 # Test schedule check (non-destructive)
 ./target/release/updatehauler schedule check >/tmp/schedule_check.txt 2>&1
-if grep -q "LaunchAgent plist" /tmp/schedule_check.txt; then
+# macOS: "LaunchAgent plist", Linux: "crontab at all" or "No crontab"
+if grep -q "LaunchAgent plist\|crontab at all\|No crontab" /tmp/schedule_check.txt; then
 	print_result "schedule check command"
 else
 	echo "Error: schedule check failed"
+	cat /tmp/schedule_check.txt
 	exit 1
 fi
 
@@ -306,12 +309,14 @@ else
 	exit 1
 fi
 
-# Test dry-run shows macOS sudo softwareupdate
+# Test dry-run shows platform-specific update command
 ./target/release/updatehauler --dry-run os >/tmp/dryrun_os_output.txt 2>&1
-if grep -q "sudo softwareupdate" /tmp/dryrun_os_output.txt; then
-	print_result "Dry-run shows sudo softwareupdate command"
+# macOS: "softwareupdate", Linux: "apt-get" or other package manager
+if grep -q "softwareupdate\|apt-get\|dnf\|apk\|pacman" /tmp/dryrun_os_output.txt; then
+	print_result "Dry-run shows platform-specific update command"
 else
-	echo "Error: Dry-run doesn't show sudo softwareupdate"
+	echo "Error: Dry-run doesn't show expected update command"
+	cat /tmp/dryrun_os_output.txt
 	exit 1
 fi
 
