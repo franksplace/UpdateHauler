@@ -26,7 +26,7 @@ use updatehauler::{
 
 fn get_help_text() -> &'static str {
     static HELP_TEXT: OnceLock<String> = OnceLock::new();
-    HELP_TEXT.get_or_init(|| build_help_text())
+    HELP_TEXT.get_or_init(build_help_text)
 }
 
 fn build_help_text() -> String {

@@ -53,7 +53,7 @@ impl Plugin for NpmPlugin {
         Ok(())
     }
 
-    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
+    async fn save(&self, config: &Config, _insights: &Insights, logger: &mut Logger) -> Result<()> {
         let npm_file = config.npm_file.to_string_lossy().to_string();
 
         if let Some(parent) = config.npm_file.parent() {
@@ -61,8 +61,6 @@ impl Plugin for NpmPlugin {
         }
 
         logger.log(&format!("Saving npm global packages to {}", npm_file));
-
-        self.update(config, insights, logger).await?;
 
         let output = cmd("npm", &["list", "-g", "--depth=0", "--json"])
             .stdout_capture()

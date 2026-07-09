@@ -33,10 +33,10 @@ pub struct Logger {
 impl Logger {
     pub fn new(config: &Config) -> Self {
         let log_config = LoggerConfig::from_config(config);
-        if log_config.use_log {
-            if let Some(parent) = log_config.log.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
+        if log_config.use_log
+            && let Some(parent) = log_config.log.parent()
+        {
+            let _ = std::fs::create_dir_all(parent);
         }
         Self {
             config: log_config,

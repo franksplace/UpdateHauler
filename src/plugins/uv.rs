@@ -97,6 +97,17 @@ impl Plugin for UvPlugin {
 
         logger.log(&format!("Saving uv tools list to {}", uv_file));
 
+        if config.dry_run {
+            if config.show_header {
+                logger.log("uv tool list → Start (DRY-RUN)");
+            }
+            logger.log("Would execute: uv tool list");
+            if config.show_header {
+                logger.log("uv tool list → Return code 0 (DRY-RUN)");
+            }
+            return Ok(());
+        }
+
         let output = cmd("uv", &["tool", "list"])
             .stdout_capture()
             .stderr_capture()

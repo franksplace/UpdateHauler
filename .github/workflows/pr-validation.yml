@@ -41,19 +41,29 @@ jobs:
 
       - name: Check PR body
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'BODYEOF'
+          ${{ github.event.pull_request.body }}
+          BODYEOF
+          )
 
           echo "Checking PR body..."
 
           # Check if body is not empty
-          if [ -z "$BODY" ]; then
+          if [ -z "$BODY" ] || [ "$(echo "$BODY" | tr -d '[:space:]')" = "" ]; then
             echo "::warning::PR body is empty"
             echo "Please provide a description of your changes"
             exit 1
           fi
 
+          # Skip content validation for dependabot PRs
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot-preview[bot]" ]; then
+            echo "✓ Dependabot PR body is present (content auto-generated)"
+            exit 0
+          fi
+
           # Check for common sections (optional but recommended)
-          if echo "$BODY" | grep -qi "changes\|added\|removed\|fixed\|updated\|description"; then
+          if echo "$BODY" | grep -qi "changes\|added\|removed\|fixed\|updated\|description\|bump\|upgrade\|release"; then
             echo "✓ PR body includes description of changes"
           else
             echo "::warning::PR body should describe changes"
@@ -278,46 +288,64 @@ jobs:
             });
 
   check-dependabot:
-    name: Check if Dependabot PR
+    name: Auto-merge Dependabot PRs
     runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'dependabot-preview[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Check author
-        id: check_author
+      - name: Wait for checks to complete
         run: |
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot-preview[bot]" ]; then
-            echo "is_dependabot=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_dependabot=false" >> $GITHUB_OUTPUT
-          fi
+          echo "Waiting for other checks to complete..."
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            IN_PROGRESS=$(gh api repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha }}/check-runs \
+              --jq '.check_runs[] | select(.status != "completed") | .name' 2>/dev/null | grep -v "Auto-merge Dependabot" || true)
+            if [ -z "$IN_PROGRESS" ]; then
+              echo "All checks completed"
+              break
+            fi
+            echo "Waiting for: $IN_PROGRESS"
+            sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-merge Dependabot PRs
-        if: steps.check_author.outputs.is_dependabot == 'true'
+      - name: Auto-merge
         uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Only auto-merge if all status checks pass
             const { data: checks } = await github.rest.checks.listForRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.payload.pull_request.head.sha,
             });
 
-            const allPassed = checks.every(check =>
-              check.conclusion === 'success'
+            const relevantChecks = checks.check_runs.filter(
+              check => check.name !== 'Auto-merge Dependabot PRs'
+            );
+
+            const allPassed = relevantChecks.every(
+              check => check.conclusion === 'success' || check.conclusion === 'skipped'
             );
 
             if (allPassed) {
-              // Merge dependabot PR automatically
               await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.issue.number,
                 merge_method: 'squash',
               });
-
               console.log('Auto-merged Dependabot PR');
+            } else {
+              const failed = relevantChecks
+                .filter(c => c.conclusion !== 'success' && c.conclusion !== 'skipped')
+                .map(c => `${c.name}: ${c.conclusion}`);
+              console.log(`Not all checks passed. Failed: ${failed.join(', ')}`);
             }
 
   notify-team:
