@@ -230,6 +230,7 @@ jobs:
 
   dry-run-test:
     name: Dry-Run Tests
+    runs-on: ${{ matrix.os }}
     needs: [build, clippy, test, audit]
     strategy:
       matrix:
