@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
+use crate::plugins::sudo_command;
 
 fn xml_escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -221,15 +222,12 @@ impl<'a> Scheduler<'a> {
 
         let time_str = format!("{}:{}:00", pm_hour, pm_min);
 
-        let pmset_result = std::process::Command::new("/usr/bin/sudo")
-            .args([
-                "/usr/bin/pmset",
-                "repeat",
-                "wakeorpoweron",
-                "MTWRFSU",
-                &time_str,
-            ])
-            .status();
+        let pmset_result = sudo_command(
+            self.config,
+            "/usr/bin/pmset",
+            &["repeat", "wakeorpoweron", "MTWRFSU", &time_str],
+        )?
+        .status();
         if let Err(e) = pmset_result {
             self.logger
                 .error(&format!("Failed to set pmset wake schedule: {}", e));
@@ -267,9 +265,12 @@ impl<'a> Scheduler<'a> {
         let plist_path = format!("{}/{}.plist", launch_agents_dir, label);
         let plist_path = PathBuf::from(&plist_path);
 
-        let pmset_result = std::process::Command::new("/usr/bin/sudo")
-            .args(["/usr/bin/pmset", "repeat", "cancel"])
-            .status();
+        let pmset_result = sudo_command(
+            self.config,
+            "/usr/bin/pmset",
+            &["repeat", "cancel"],
+        )?
+        .status();
         if let Err(e) = pmset_result {
             self.logger
                 .error(&format!("Failed to cancel pmset schedule: {}", e));

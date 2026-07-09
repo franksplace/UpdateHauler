@@ -80,6 +80,17 @@ impl Logger {
         self.log(&format!("ERROR {}", colored_msg));
     }
 
+    pub fn audit(&mut self, msg: &str) {
+        let timestamp = Local::now().format("%FT%T%.6f%:z").to_string();
+        let user = std::env::var("USER")
+            .or_else(|_| std::env::var("LOGNAME"))
+            .unwrap_or_else(|_| "unknown".to_string());
+        let output = format!("{} [AUDIT] user={} {}", timestamp, user, msg);
+        if let Err(e) = self.write_to_log(&output) {
+            eprintln!("Failed to write audit log: {}", e);
+        }
+    }
+
     fn write_to_log(&self, output: &str) -> Result<()> {
         let log_path = &self.config.log;
 

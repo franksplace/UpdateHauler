@@ -33,6 +33,9 @@ pub trait Plugin: Send + Sync {
     /// Returns the plugin's name
     fn name(&self) -> &str;
 
+    /// Returns plugin metadata (name, description, available actions)
+    fn get_metadata(&self) -> PluginMetadata;
+
     /// Checks if the plugin is available on the system
     async fn check_available(&self, config: &Config, insights: &Insights) -> bool;
 
@@ -40,10 +43,30 @@ pub trait Plugin: Send + Sync {
     async fn update(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()>;
 
     /// Saves the current state of packages managed by this plugin
-    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()>;
+    /// Default: logs "No save needed" and returns Ok(()). Override if your plugin supports save.
+    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
+        logger.log("No save needed for this plugin");
+        Ok(())
+    }
 
     /// Restores packages from a previously saved state
-    async fn restore(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()>;
+    /// Default: logs "No restore needed" and returns Ok(()). Override if your plugin supports restore.
+    async fn restore(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
+        logger.log("No restore needed for this plugin");
+        Ok(())
+    }
+
+    /// Handle custom actions beyond update/save/restore
+    /// Default: returns Ok(false) (action not handled). Override to add custom actions.
+    async fn handle_custom_action(
+        &self,
+        _action_name: &str,
+        _config: &Config,
+        _insights: &Insights,
+        _logger: &mut Logger,
+    ) -> Result<bool> {
+        Ok(false)
+    }
 }
 ```
 
@@ -57,7 +80,7 @@ Create a new file in `src/plugins/` directory. For example, `src/plugins/my_plug
 use async_trait::async_trait;
 use duct::cmd;
 
-use super::Plugin;
+use super::{Plugin, PluginAction, PluginActionType, PluginMetadata};
 use crate::config::Config;
 use crate::insights::Insights;
 use crate::logger::Logger;
@@ -69,6 +92,30 @@ pub struct MyPlugin;
 impl Plugin for MyPlugin {
     fn name(&self) -> &str {
         "my_plugin"
+    }
+
+    fn get_metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my_plugin".to_string(),
+            description: "My custom plugin".to_string(),
+            actions: vec![
+                PluginAction {
+                    name: "my_plugin".to_string(),
+                    description: "Update my_plugin packages".to_string(),
+                    action_type: Some(PluginActionType::Update),
+                },
+                PluginAction {
+                    name: "my_plugin-save".to_string(),
+                    description: "Save my_plugin state".to_string(),
+                    action_type: Some(PluginActionType::Save),
+                },
+                PluginAction {
+                    name: "my_plugin-restore".to_string(),
+                    description: "Restore my_plugin state".to_string(),
+                    action_type: Some(PluginActionType::Restore),
+                },
+            ],
+        }
     }
 
     async fn check_available(&self, _config: &Config, insights: &Insights) -> bool {
@@ -84,19 +131,8 @@ impl Plugin for MyPlugin {
         Ok(())
     }
 
-    async fn save(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
-        // Implement save logic (optional)
-        logger.log("Saving my_plugin state...");
-        // Save current package list to a file, etc.
-        Ok(())
-    }
-
-    async fn restore(&self, config: &Config, insights: &Insights, logger: &mut Logger) -> Result<()> {
-        // Implement restore logic (optional)
-        logger.log("Restoring my_plugin state...");
-        // Restore packages from a previously saved file
-        Ok(())
-    }
+    // save() and restore() have default implementations.
+    // Only override them if your plugin supports save/restore.
 }
 ```
 
@@ -171,19 +207,6 @@ fn create_plugin_registry() -> PluginRegistry<'static> {
 - Consistent registration pattern
 - Easy to add/remove plugins
 - Trailing commas are supported for better diff formatting
-
-### 4. Register with PluginRegistry
-
-In `src/main.rs`, register your plugin with the registry:
-
-```rust
-let mut plugin_registry = PluginRegistry::new();
-plugin_registry.register(Box::new(BrewPlugin));
-plugin_registry.register(Box::new(CargoPlugin));
-plugin_registry.register(Box::new(NvimPlugin));
-plugin_registry.register(Box::new(OsPlugin));
-plugin_registry.register(Box::new(MyPlugin));  // Add this
-```
 
 ### 5. Add Configuration Support (Optional)
 

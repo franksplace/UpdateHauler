@@ -5,7 +5,27 @@ All notable changes to UpdateHauler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1]
+
+### Security
+- **Sudo path hardening**: All sudo invocations now validate that `/usr/bin/sudo` exists at the expected system path before execution, preventing PATH hijacking attacks
+- **Centralized sudo utility**: Consolidated all sudo usage into `sudo_command()` and `run_with_sudo()` in a single module for consistent security validation
+- **Command audit logging**: The `run` plugin now logs all executed commands to the log file with timestamps and usernames via `[AUDIT]` entries, providing an audit trail
+- **Confirmation prompt for arbitrary commands**: New `--confirm-run` flag prompts for user confirmation before executing commands via `updatehauler run --cmd`
+
+### Added
+- `--no-sudo` CLI flag and `no_sudo` config option to skip sudo elevation entirely
+- `--confirm-run` CLI flag and `confirm_run` config option to prompt before running arbitrary commands
+- `UPDATEHAULER_NO_SUDO` environment variable support for non-interactive sudo bypass
+- `Logger::audit()` method for always-on audit log entries regardless of `--logfile-only` setting
+
+### Changed
+- Cleaned up markdown formatting across README and documentation
+- Improved `--help` output formatting and readability
+- Refactored `os.rs` to use centralized `run_with_sudo()` instead of raw sudo paths
+- Refactored `scheduler.rs` `pmset` calls to use `sudo_command()` instead of raw `Command::new("/usr/bin/sudo")`
+
+## [0.3.0]
 
 ### Added
 - Hybrid plugin system with dynamic action discovery
@@ -15,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plugin enable/disable via CLI flags (`--enable-plugin`, `--disable-plugin`)
 - Desktop notifications on completion (`--notify`)
 - Run summary with success/failure counts at end of execution
-- Comprehensive test suite with 80 tests
+- Comprehensive test suite with 123 tests
 - Shell completion support (bash, zsh, fish, powershell, elvish) with descriptive help
 - Context-aware completions (schedule subcommands, shell types after parent commands)
 - Code coverage reporting
@@ -75,8 +95,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive README with examples
 - Plugin development guide (PLUGIN_DEV.md)
 - CLI design documentation (CLI_DESIGN.md)
-- Hybrid design documentation (HYBRID_DESIGN.md)
-- Implementation status tracking (IMPLEMENTATION_STATUS.md)
 
 ### Testing
 - Unit tests for all modules

@@ -257,6 +257,51 @@ impl<'a> PluginRegistry<'a> {
     }
 }
 
+const SUDO_PATH: &str = "/usr/bin/sudo";
+
+fn validate_sudo_path() -> Result<()> {
+    if !std::path::Path::new(SUDO_PATH).exists() {
+        anyhow::bail!(
+            "sudo not found at expected path '{}'. \
+             This may indicate a compromised system or unusual PATH configuration.",
+            SUDO_PATH
+        );
+    }
+    Ok(())
+}
+
+pub fn sudo_command(config: &Config, program: &str, args: &[&str]) -> Result<std::process::Command> {
+    if config.no_sudo || std::env::var("UPDATEHAULER_NO_SUDO").is_ok() {
+        let mut cmd = std::process::Command::new(program);
+        cmd.args(args);
+        return Ok(cmd);
+    }
+
+    validate_sudo_path()?;
+
+    let mut cmd = std::process::Command::new(SUDO_PATH);
+    cmd.arg(program).args(args);
+    Ok(cmd)
+}
+
+pub(crate) fn run_with_sudo(
+    config: &Config,
+    logger: &mut Logger,
+    show_error: bool,
+    command: &str,
+    args: &[&str],
+) -> Result<()> {
+    if config.no_sudo || std::env::var("UPDATEHAULER_NO_SUDO").is_ok() {
+        return run_cmd(config, logger, show_error, command, args);
+    }
+
+    validate_sudo_path()?;
+
+    let mut sudo_args: Vec<&str> = vec![command];
+    sudo_args.extend(args);
+    run_cmd(config, logger, show_error, SUDO_PATH, &sudo_args)
+}
+
 pub(crate) fn run_cmd(
     config: &Config,
     logger: &mut Logger,

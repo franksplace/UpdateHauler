@@ -34,7 +34,7 @@ fn build_help_text() -> String {
         r#"
 ACTIONS:
 
-Update Actions:
+ Update Actions:
 "#,
     );
 
@@ -42,57 +42,57 @@ Update Actions:
 
     for metadata in registry.get_all_metadata() {
         help.push_str(&format!(
-            "  {:<18} {}\n",
+            "   {:<20} {}\n",
             metadata.name, metadata.description
         ));
 
         for action in &metadata.actions {
             if action.name != metadata.name {
-                help.push_str(&format!("  {:<18} {}\n", action.name, action.description));
+                help.push_str(&format!("   {:<20} {}\n", action.name, action.description));
             }
         }
     }
 
     help.push_str(
         r#"
-Run Action:
-   run --cmd <command>  Run an arbitrary command (e.g., updatehauler run --cmd "echo hello")
+ Run Action:
+   run --cmd <command>   Run an arbitrary command (e.g., updatehauler run --cmd "echo hello")
 
-Schedule Actions:
-   schedule enable    Enable scheduled updates (cron on Linux, launchd on macOS)
-   schedule disable   Disable scheduled updates
-   schedule check     Check current scheduling status
+ Schedule Actions:
+   schedule enable      Enable scheduled updates (cron on Linux, launchd on macOS)
+   schedule disable     Disable scheduled updates
+   schedule check       Check current scheduling status
 
-Maintenance Actions:
-   trim-logfile       Trim logfile to max lines
+ Maintenance Actions:
+   trim-logfile         Trim logfile to max lines
 
  Self-Installation Actions:
-   install            Install this script to system
-   update             Update this script on the system
-   remove             Remove this script from system
-   install-completions Install shell completions (bash, zsh)
+   install              Install this script to system
+   update               Update this script on the system
+   remove               Remove this script from system
+   install-completions  Install shell completions (bash, zsh)
 
  Plugin Help:
-   <plugin> help      Show detailed help for a specific plugin
+   <plugin> help        Show detailed help for a specific plugin
 
  Default Actions (when no actions specified):
-    Controlled by YAML config (varies by platform and installed tools)
+   Controlled by YAML config (varies by platform and installed tools)
 
  Examples:
-   updatehauler                       # Run all default actions
-   updatehauler os                    # Update OS packages only
-   updatehauler brew brew-save        # Update and save brew packages
-   updatehauler nvim                  # Update Neovim plugins
-   updatehauler --debug               # Run with debug output
-   updatehauler --no-datetime         # Run without timestamps
-   updatehauler --config ~/.config/updatehauler/config.yaml  # Use custom config
-   updatehauler schedule enable       # Enable daily updates at 2 AM
-    updatehauler run --cmd "echo hello" # Run arbitrary command
-    updatehauler --list-plugins        # List all plugins and their status
-    updatehauler --only brew           # Run only the brew plugin
-    updatehauler brew help            # Show detailed help for brew plugin
-    updatehauler install-completions  # Install shell completions
-    updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
+   updatehauler                                           # Run all default actions
+   updatehauler os                                        # Update OS packages only
+   updatehauler brew brew-save                            # Update and save brew packages
+   updatehauler nvim                                      # Update Neovim plugins
+   updatehauler --debug                                   # Run with debug output
+   updatehauler --no-datetime                             # Run without timestamps
+   updatehauler --config ~/.config/updatehauler/config.yaml # Use custom config
+   updatehauler schedule enable                           # Enable daily updates at 2 AM
+   updatehauler run --cmd "echo hello"                    # Run arbitrary command
+   updatehauler --list-plugins                            # List all plugins and their status
+   updatehauler --only brew                               # Run only the brew plugin
+   updatehauler brew help                                 # Show detailed help for brew plugin
+   updatehauler install-completions                       # Install shell completions
+   updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
  "#,
     );
 
@@ -198,7 +198,7 @@ _{app_name}() {{
         local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem gem-save gem-restore go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
-    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
+    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --no-sudo --confirm-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
 
     cur="${{COMP_WORDS[COMP_CWORD]}}"
     prev="${{COMP_WORDS[COMP_CWORD-1]}}"
@@ -308,6 +308,8 @@ _{app_name}() {{
         '--no-color[Disable color output]' \
         '--logfile-only[Enable output to only logfile]' \
         '--dry-run[Dry-run mode - show what would be done without making changes]' \
+        '--no-sudo[Skip sudo elevation - run commands as current user]' \
+        '--confirm-run[Prompt for confirmation before running arbitrary commands]' \
         '--notify[Send desktop notification when updates complete]' \
         '--logfile+[Logfile to use]:FILE:_files' \
         '--max-log-lines+[Max lines for logfile]:N:_numbers' \
@@ -476,6 +478,18 @@ struct Args {
         help = "Dry-run mode - show what would be done without making changes"
     )]
     dry_run: bool,
+
+    #[arg(
+        long,
+        help = "Skip sudo elevation - run commands as current user"
+    )]
+    no_sudo: bool,
+
+    #[arg(
+        long,
+        help = "Prompt for confirmation before running arbitrary commands"
+    )]
+    confirm_run: bool,
 
     #[arg(
         long,
@@ -690,6 +704,8 @@ fn main() -> Result<ExitCode> {
         config.use_log = true;
     }
     config.dry_run = args.dry_run;
+    config.no_sudo = args.no_sudo;
+    config.confirm_run = args.confirm_run;
     config.notify = args.notify;
     if let Some(logfile) = args.logfile {
         let p = PathBuf::from(&logfile);

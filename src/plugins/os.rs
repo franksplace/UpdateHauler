@@ -37,12 +37,12 @@ impl Plugin for OsPlugin {
         logger: &mut Logger,
     ) -> Result<()> {
         if insights.is_darwin {
-            let softwareupdate_result = super::run_cmd(
+            let softwareupdate_result = super::run_with_sudo(
                 config,
                 logger,
                 false,
-                "/usr/bin/sudo",
-                &["/usr/sbin/softwareupdate", "-a", "-i", "--verbose"],
+                "/usr/sbin/softwareupdate",
+                &["-a", "-i", "--verbose"],
             );
 
             if softwareupdate_result.is_err() {
@@ -92,9 +92,7 @@ impl Plugin for OsPlugin {
                         let args: Vec<&str> = args.to_vec();
                         super::run_cmd(config, logger, true, program, &args)?;
                     } else {
-                        let mut sudo_args: Vec<&str> = vec![program];
-                        sudo_args.extend(args);
-                        super::run_cmd(config, logger, true, "/usr/bin/sudo", &sudo_args)?;
+                        super::run_with_sudo(config, logger, true, program, args)?;
                     }
                 }
             } else {

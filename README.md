@@ -29,6 +29,16 @@ UpdateHauler now uses a modular plugin architecture:
 - **Ruby Plugin** - Update Ruby gems (gem update)
 - **Go Plugin** - Update Go modules and tools (go install)
 
+**Runtime & Extension Plugins:**
+- **Rustup Plugin** - Update Rust toolchains via rustup
+- **Deno Plugin** - Upgrade the Deno runtime
+- **VSCode Plugin** - Update VSCode/Cursor extensions
+
+**Container & Linux Package Plugins:**
+- **Docker Plugin** - Clean up unused Docker data (prune images, containers, networks)
+- **Snap Plugin** - Update Snap packages (Linux)
+- **Flatpak Plugin** - Update Flatpak applications (Linux)
+
 **OS Package Manager Plugin:**
 - **OS Plugin** - System updates for multiple platforms:
   - **macOS** - System updates via `softwareupdate` and Mac App Store updates via `mas`
@@ -100,14 +110,21 @@ updatehauler [OPTIONS] [ACTION]...
 |--------|-------------|
 | `brew` | Update, upgrade, and cleanup brew formulas and casks |
 | `cargo` | Update cargo-installed packages (requires `cargo-install-update`) |
+| `deno` | Upgrade the Deno runtime |
+| `docker` | Clean up unused Docker data (prune images, containers, networks) |
+| `flatpak` | Update Flatpak applications |
+| `gem` | Update Ruby gems |
+| `go` | Update Go modules and tools |
 | `npm` | Update globally installed npm packages |
 | `nvim` | Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug) |
 | `os` | Update OS and app-based packages |
 | `pip` | Update pip packages |
+| `run` | Run an arbitrary command with logging |
+| `rustup` | Update Rust toolchains via rustup |
+| `snap` | Update Snap packages |
 | `uv` | Update uv itself and upgrade all installed tools |
+| `vscode` | Update VSCode/Cursor extensions |
 | `yarn` | Update globally installed Yarn/PNPM packages |
-| `ruby` | Update Ruby gems |
-| `go` | Update Go modules and tools |
 
 #### Backup/Restore Actions
 
@@ -127,8 +144,8 @@ updatehauler [OPTIONS] [ACTION]...
 | `uv-restore` | Restore uv tools from saved JSON |
 | `yarn-save` | Save globally installed Yarn/PNPM packages to JSON |
 | `yarn-restore` | Restore Yarn/PNPM packages from saved JSON |
-| `ruby-save` | Save installed Ruby gems list to file |
-| `ruby-restore` | Restore Ruby gems from saved list |
+| `gem-save` | Save installed Ruby gems list to file |
+| `gem-restore` | Restore Ruby gems from saved list |
 | `go-save` | Save installed Go binaries list |
 | `go-restore` | Restore Go tools from saved list |
 
@@ -186,8 +203,14 @@ When run without actions, updatehauler automatically (controlled by YAML config)
 10. Updates Yarn/PNPM packages (if installed and enabled)
 11. Updates Go modules and tools (if installed and enabled)
 12. Updates Ruby gems (if installed and enabled)
-13. Updates Neovim plugins (if enabled)
-14. Trims logfile
+13. Updates Rust toolchains via rustup (if installed and enabled)
+14. Upgrades Deno (if installed and enabled)
+15. Updates VSCode/Cursor extensions (if installed and enabled)
+16. Updates Snap packages (if installed and enabled)
+17. Updates Flatpak applications (if installed and enabled)
+18. Prunes unused Docker data (if installed and enabled)
+19. Updates Neovim plugins (if enabled)
+20. Trims logfile
 
 After all actions complete, a summary is printed showing the number of successful and failed actions. If any action failed, the exit code is non-zero.
 
@@ -388,9 +411,15 @@ plugins:
   os: true
   pip: true
   uv: true
+  rustup: true
+  deno: false
+  docker: false
+  snap: false
+  flatpak: false
+  vscode: false
+  gem: false
   yarn: false
   go: false
-  gem: false
 ```
 
 **Available YAML Options:**
@@ -421,9 +450,15 @@ plugins:
 | `plugins.npm` | bool | Enable/disable npm plugin |
 | `plugins.pip` | bool | Enable/disable pip plugin |
 | `plugins.uv` | bool | Enable/disable uv plugin |
+| `plugins.rustup` | bool | Enable/disable rustup plugin |
+| `plugins.deno` | bool | Enable/disable deno plugin |
+| `plugins.docker` | bool | Enable/disable docker plugin |
+| `plugins.snap` | bool | Enable/disable snap plugin |
+| `plugins.flatpak` | bool | Enable/disable flatpak plugin |
+| `plugins.vscode` | bool | Enable/disable vscode plugin |
+| `plugins.gem` | bool | Enable/disable Ruby gems plugin |
 | `plugins.yarn` | bool | Enable/disable Yarn plugin |
 | `plugins.go` | bool | Enable/disable Go module plugin |
-| `plugins.gem` | bool | Enable/disable Ruby gems plugin |
 
 **Note:** Command-line options override YAML configuration settings.
 
@@ -504,9 +539,6 @@ updatehauler --dry-run brew brew-save cargo cargo-save
 
 ## What UpdateHauler Does NOT Do
 
-- ❌ Update docker containers
-- ❌ Snap packages (Linux)
-- ❌ Flatpak packages (Linux)
 - ❌ AUR packages (Arch Linux - requires yay/paru)
 - ❌ GUI configuration or settings
 - ❌ Version pinning or rollback capabilities
@@ -562,7 +594,7 @@ updatehauler install-completions elvish
 ```
 
 Once enabled, completions will automatically suggest:
-- Plugins: `brew`, `cargo`, `nvim`, `os`
+- Plugins: `brew`, `cargo`, `deno`, `docker`, `flatpak`, `gem`, `go`, `npm`, `nvim`, `os`, `pip`, `run`, `rustup`, `snap`, `uv`, `vscode`, `yarn`
 - Actions: `brew-save`, `brew-restore`, `cargo-save`, etc. with descriptions
 - Commands: `install`, `update`, `remove`, `install-completions`
 - Schedule subcommands: `enable`, `disable`, `check` (after `schedule`)

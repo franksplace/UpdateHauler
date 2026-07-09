@@ -25,6 +25,12 @@ use_log: false
 # Dry-run mode - show what would be done without making changes
 dry_run: false
 
+# Skip sudo elevation - run commands as current user
+# no_sudo: false
+
+# Prompt for confirmation before running arbitrary commands
+# confirm_run: false
+
 # Send desktop notification when updates complete
 # notify: true
 
@@ -126,6 +132,8 @@ pub struct ConfigFile {
     pub use_log: Option<bool>,
     pub dry_run: Option<bool>,
     pub notify: Option<bool>,
+    pub no_sudo: Option<bool>,
+    pub confirm_run: Option<bool>,
     pub max_log_lines: Option<usize>,
     pub logfile: Option<String>,
     pub installdir: Option<String>,
@@ -185,6 +193,8 @@ pub struct Config {
     pub color: bool,
     pub use_log: bool,
     pub dry_run: bool,
+    pub no_sudo: bool,
+    pub confirm_run: bool,
     pub log: PathBuf,
     pub brew_file: PathBuf,
     pub cargo_file: PathBuf,
@@ -222,6 +232,8 @@ impl Config {
             color: true,
             use_log: false,
             dry_run: false,
+            no_sudo: false,
+            confirm_run: false,
             log: home_path.join(".local/updates.log"),
             brew_file: PathBuf::new(),
             cargo_file: PathBuf::new(),
@@ -290,6 +302,12 @@ impl Config {
         }
         if let Some(notify) = config_file_yaml.notify {
             config.notify = notify;
+        }
+        if let Some(no_sudo) = config_file_yaml.no_sudo {
+            config.no_sudo = no_sudo;
+        }
+        if let Some(confirm_run) = config_file_yaml.confirm_run {
+            config.confirm_run = confirm_run;
         }
         if let Some(max_log_lines) = config_file_yaml.max_log_lines {
             config.max_log_lines = max_log_lines;

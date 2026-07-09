@@ -55,6 +55,26 @@ impl Plugin for RunPlugin {
             (program.clone(), args)
         };
 
+        let cmd_display = format!("{} {}", program, args.join(" "));
+
+        logger.audit(&format!("execute: {}", cmd_display));
+
+        if config.confirm_run {
+            if atty::is(atty::Stream::Stdin) {
+                logger.log(&format!("About to execute: {}", cmd_display));
+                logger.log("Proceed? [y/N] ");
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                let trimmed = input.trim().to_lowercase();
+                if trimmed != "y" && trimmed != "yes" {
+                    logger.log("Command cancelled by user");
+                    return Ok(());
+                }
+            } else {
+                logger.log("Non-interactive session, skipping confirmation prompt");
+            }
+        }
+
         super::run_cmd(config, logger, true, &program, &args)?;
         Ok(())
     }

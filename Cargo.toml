@@ -1,6 +1,6 @@
 [package]
 name = "updatehauler"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 description = "System package update manager for macOS and Linux"
 authors = ["FrankStutz"]
@@ -30,6 +30,7 @@ strsim = "0.11"
 nix = { version = "0.31", features = ["user"] }
 async-trait = "0.1"
 tokio = { version = "1.40", features = ["full"] }
+atty = "0.2"
 
 [dev-dependencies]
 tempfile = "3.14"
