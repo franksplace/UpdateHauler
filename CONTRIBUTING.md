@@ -67,6 +67,28 @@ cargo fmt
 ./test_release.sh
 ```
 
+### Pre-commit Validation
+
+Run the validation script before committing to catch CI failures early:
+
+```bash
+# Quick checks (formatting + clippy) - takes ~30 seconds
+./scripts/validate.sh quick
+
+# Full validation (formatting + clippy + tests + build) - takes ~2 minutes
+./scripts/validate.sh
+
+# Install as git pre-commit hook (runs automatically before each commit)
+./scripts/validate.sh install
+```
+
+The script checks:
+- `cargo fmt` formatting
+- `cargo clippy` lints
+- Unit and integration tests
+- Release build success
+- Version consistency between `Cargo.toml` and `test_release.sh`
+
 ### 4. Commit Changes
 
 Use [conventional commits](https://www.conventionalcommits.org/) for commit messages:

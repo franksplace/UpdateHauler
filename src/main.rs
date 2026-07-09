@@ -479,10 +479,7 @@ struct Args {
     )]
     dry_run: bool,
 
-    #[arg(
-        long,
-        help = "Skip sudo elevation - run commands as current user"
-    )]
+    #[arg(long, help = "Skip sudo elevation - run commands as current user")]
     no_sudo: bool,
 
     #[arg(

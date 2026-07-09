@@ -265,12 +265,8 @@ impl<'a> Scheduler<'a> {
         let plist_path = format!("{}/{}.plist", launch_agents_dir, label);
         let plist_path = PathBuf::from(&plist_path);
 
-        let pmset_result = sudo_command(
-            self.config,
-            "/usr/bin/pmset",
-            &["repeat", "cancel"],
-        )?
-        .status();
+        let pmset_result =
+            sudo_command(self.config, "/usr/bin/pmset", &["repeat", "cancel"])?.status();
         if let Err(e) = pmset_result {
             self.logger
                 .error(&format!("Failed to cancel pmset schedule: {}", e));

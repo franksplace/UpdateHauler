@@ -270,7 +270,11 @@ fn validate_sudo_path() -> Result<()> {
     Ok(())
 }
 
-pub fn sudo_command(config: &Config, program: &str, args: &[&str]) -> Result<std::process::Command> {
+pub fn sudo_command(
+    config: &Config,
+    program: &str,
+    args: &[&str],
+) -> Result<std::process::Command> {
     if config.no_sudo || std::env::var("UPDATEHAULER_NO_SUDO").is_ok() {
         let mut cmd = std::process::Command::new(program);
         cmd.args(args);

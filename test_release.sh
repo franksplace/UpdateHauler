@@ -71,12 +71,14 @@ fi
 
 print_section "5. Testing --version"
 
+EXPECTED_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
 ./target/release/updatehauler --version >/tmp/version_output.txt
 if grep -q "updatehauler" /tmp/version_output.txt &&
-	grep -q "0.3.0" /tmp/version_output.txt; then
+	grep -q "$EXPECTED_VERSION" /tmp/version_output.txt; then
 	print_result "--version command"
 else
-	echo "Error: --version output invalid"
+	echo "Error: --version output invalid (expected version $EXPECTED_VERSION)"
+	cat /tmp/version_output.txt
 	exit 1
 fi
 
