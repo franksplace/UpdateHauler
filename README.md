@@ -181,6 +181,14 @@ updatehauler [OPTIONS] [ACTION]...
 |--------|-------------|
 | `trim-logfile` | Trim logfile to maximum lines |
 
+#### Config Actions
+
+| Action | Description |
+|--------|-------------|
+| `config init` | Generate default config file |
+| `config compare` | Compare default config with local config |
+| `config merge` | Interactive merge from defaults into local config |
+
 #### Self-Installation Actions
 
 | Action | Description |
@@ -315,6 +323,14 @@ updatehauler brew-restore
 updatehauler cargo-restore
 updatehauler npm-restore
 updatehauler pip-restore
+```
+
+### Manage configuration
+```bash
+updatehauler config init                                    # Generate default config file
+updatehauler config compare                                 # Compare config with defaults
+updatehauler config merge                                   # Interactive merge config
+updatehauler --config ~/.config/custom.yaml config compare  # Compare custom config
 ```
 
 ### Install to system
@@ -603,6 +619,7 @@ Once enabled, completions will automatically suggest:
 - Actions: `brew-save`, `brew-restore`, `cargo-save`, etc. with descriptions
 - Commands: `install`, `update`, `remove`, `install-completions`
 - Schedule subcommands: `enable`, `disable`, `check` (after `schedule`)
+- Config subcommands: `init`, `compare`, `merge` (after `config`)
 - Shell types: `bash`, `zsh`, `fish`, `powershell`, `elvish` (after `install-completions`)
 - Flags: `--help`, `--dry-run`, `--debug`, etc.
 

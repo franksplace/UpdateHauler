@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
+use colored::Colorize;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub fn generate_sample_yaml() -> String {
@@ -394,6 +396,280 @@ impl Config {
         Ok(config)
     }
 
+    pub fn default_config_path() -> Result<PathBuf> {
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        Ok(PathBuf::from(home).join(".config/updatehauler/config.yaml"))
+    }
+
+    pub fn config_init(path: Option<&PathBuf>) -> Result<()> {
+        let config_path = match path {
+            Some(p) => p.clone(),
+            None => Self::default_config_path()?,
+        };
+
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let yaml = generate_sample_yaml();
+        std::fs::write(&config_path, &yaml)?;
+
+        println!("Generated config file: {}", config_path.display());
+        println!("Edit this file to customize updatehauler behavior.");
+        Ok(())
+    }
+
+    pub fn config_compare(path: Option<&PathBuf>) -> Result<()> {
+        let config_path = match path {
+            Some(p) => p.clone(),
+            None => Self::default_config_path()?,
+        };
+
+        let default_yaml = generate_sample_yaml();
+        let default_val: serde_yaml::Value =
+            serde_yaml::from_str(&default_yaml).context("Failed to parse default YAML")?;
+
+        let local_yaml = if config_path.exists() {
+            std::fs::read_to_string(&config_path)
+                .context(format!("Failed to read config file: {:?}", config_path))?
+        } else {
+            println!("{}", "No local config file found.".yellow());
+            println!("Run `updatehauler config init` to generate one.");
+            return Ok(());
+        };
+
+        let local_val: serde_yaml::Value =
+            serde_yaml::from_str(&local_yaml).context("Failed to parse local YAML config")?;
+
+        let mut default_flat = BTreeMap::new();
+        flatten_yaml_value(&default_val, "", &mut default_flat);
+
+        let mut local_flat = BTreeMap::new();
+        flatten_yaml_value(&local_val, "", &mut local_flat);
+
+        let mut diffs: Vec<(String, Option<String>, Option<String>)> = Vec::new();
+
+        for key in default_flat.keys() {
+            match local_flat.get(key) {
+                None => diffs.push((key.clone(), Some(default_flat[key].clone()), None)),
+                Some(local_val) => {
+                    if local_val != &default_flat[key] {
+                        diffs.push((
+                            key.clone(),
+                            Some(default_flat[key].clone()),
+                            Some(local_val.clone()),
+                        ));
+                    }
+                }
+            }
+        }
+
+        for key in local_flat.keys() {
+            if !default_flat.contains_key(key) {
+                diffs.push((key.clone(), None, Some(local_flat[key].clone())));
+            }
+        }
+
+        if diffs.is_empty() {
+            println!(
+                "{}",
+                "Configs are identical. No differences found."
+                    .green()
+                    .bold()
+            );
+            return Ok(());
+        }
+
+        println!(
+            "{}",
+            format!("Found {} difference(s):", diffs.len())
+                .yellow()
+                .bold()
+        );
+        println!();
+
+        for (key, default_val, local_val) in &diffs {
+            match (default_val, local_val) {
+                (Some(d), None) => {
+                    println!("  {} {} = {}", "+".green().bold(), key.green(), d.green());
+                }
+                (None, Some(l)) => {
+                    println!("  {} {} = {}", "-".red().bold(), key.red(), l.red());
+                }
+                (Some(d), Some(l)) => {
+                    println!("  {} {}:", "~".yellow().bold(), key.yellow());
+                    println!("    {} {}", "-".red(), l.red());
+                    println!("    {} {}", "+".green(), d.green());
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn config_merge(path: Option<&PathBuf>) -> Result<()> {
+        let config_path = match path {
+            Some(p) => p.clone(),
+            None => Self::default_config_path()?,
+        };
+
+        let default_yaml = generate_sample_yaml();
+        let default_val: serde_yaml::Value =
+            serde_yaml::from_str(&default_yaml).context("Failed to parse default YAML")?;
+
+        if !config_path.exists() {
+            println!("{}", "No local config file found.".yellow());
+            println!("Creating config from defaults...");
+            Self::config_init(Some(&config_path))?;
+            return Ok(());
+        }
+
+        let local_yaml = std::fs::read_to_string(&config_path)
+            .context(format!("Failed to read config file: {:?}", config_path))?;
+
+        let local_val: serde_yaml::Value =
+            serde_yaml::from_str(&local_yaml).context("Failed to parse local YAML config")?;
+
+        let mut default_flat = BTreeMap::new();
+        flatten_yaml_value(&default_val, "", &mut default_flat);
+
+        let mut local_flat = BTreeMap::new();
+        flatten_yaml_value(&local_val, "", &mut local_flat);
+
+        let mut diffs: Vec<(String, Option<String>, Option<String>)> = Vec::new();
+
+        for key in default_flat.keys() {
+            match local_flat.get(key) {
+                None => diffs.push((key.clone(), Some(default_flat[key].clone()), None)),
+                Some(local_val) => {
+                    if local_val != &default_flat[key] {
+                        diffs.push((
+                            key.clone(),
+                            Some(default_flat[key].clone()),
+                            Some(local_val.clone()),
+                        ));
+                    }
+                }
+            }
+        }
+
+        for key in local_flat.keys() {
+            if !default_flat.contains_key(key) {
+                diffs.push((key.clone(), None, Some(local_flat[key].clone())));
+            }
+        }
+
+        if diffs.is_empty() {
+            println!(
+                "{}",
+                "Configs are identical. Nothing to merge.".green().bold()
+            );
+            return Ok(());
+        }
+
+        println!(
+            "{}",
+            format!("Found {} difference(s) to merge:", diffs.len())
+                .yellow()
+                .bold()
+        );
+        println!();
+
+        let mut accepted = 0;
+        let mut skipped = 0;
+
+        for (key, default_val, local_val) in &diffs {
+            match (default_val, local_val) {
+                (Some(d), None) => {
+                    println!(
+                        "  {} New field: {} = {}",
+                        "+".green().bold(),
+                        key.green(),
+                        d.green()
+                    );
+                    print!("  Accept new value? [Y/n] ");
+                    use std::io::Write;
+                    std::io::stdout().flush()?;
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input)?;
+                    if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("y") {
+                        local_flat.insert(key.clone(), d.clone());
+                        accepted += 1;
+                        println!("    {}", "Accepted.".green());
+                    } else {
+                        skipped += 1;
+                        println!("    {} Skipped.", "Kept local.".red());
+                    }
+                }
+                (None, Some(l)) => {
+                    println!(
+                        "  {} Removed in new: {} (current: {})",
+                        "-".red().bold(),
+                        key.red(),
+                        l.red()
+                    );
+                    print!("  Accept removal? [Y/n] ");
+                    use std::io::Write;
+                    std::io::stdout().flush()?;
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input)?;
+                    if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("y") {
+                        local_flat.remove(key);
+                        accepted += 1;
+                        println!("    {}", "Accepted.".green());
+                    } else {
+                        skipped += 1;
+                        println!("    {} Skipped.", "Kept local.".red());
+                    }
+                }
+                (Some(d), Some(l)) => {
+                    println!("  {} Changed: {}:", "~".yellow().bold(), key.yellow());
+                    println!("    {} Current: {}", "-".red(), l.red());
+                    println!("    {} New:     {}", "+".green(), d.green());
+                    print!("  Accept new value? [Y/n] ");
+                    use std::io::Write;
+                    std::io::stdout().flush()?;
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input)?;
+                    if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("y") {
+                        local_flat.insert(key.clone(), d.clone());
+                        accepted += 1;
+                        println!("    {}", "Accepted.".green());
+                    } else {
+                        skipped += 1;
+                        println!("    {} Skipped.", "Kept local.".red());
+                    }
+                }
+                _ => {}
+            }
+            println!();
+        }
+
+        let mut merged = serde_yaml::Value::Mapping(serde_yaml::Mapping::new());
+        build_yaml_from_flat(&local_flat, &mut merged);
+
+        let merged_yaml =
+            serde_yaml::to_string(&merged).context("Failed to serialize merged YAML")?;
+
+        std::fs::write(&config_path, &merged_yaml)
+            .context(format!("Failed to write config file: {:?}", config_path))?;
+
+        println!(
+            "{}",
+            format!(
+                "Merged config written to: {} ({} accepted, {} skipped)",
+                config_path.display(),
+                accepted,
+                skipped
+            )
+            .green()
+            .bold()
+        );
+
+        Ok(())
+    }
+
     pub fn apply_plugin_enabled(&mut self, name: &str, enabled: bool) {
         match name {
             "brew" => self.plugins_enabled.brew = Some(enabled),
@@ -462,5 +738,70 @@ impl Config {
         }
 
         path_parts.join(":")
+    }
+}
+
+fn flatten_yaml_value(
+    value: &serde_yaml::Value,
+    prefix: &str,
+    result: &mut BTreeMap<String, String>,
+) {
+    match value {
+        serde_yaml::Value::Mapping(map) => {
+            for (k, v) in map {
+                if let serde_yaml::Value::String(key) = k {
+                    let new_prefix = if prefix.is_empty() {
+                        key.clone()
+                    } else {
+                        format!("{}.{}", prefix, key)
+                    };
+                    flatten_yaml_value(v, &new_prefix, result);
+                }
+            }
+        }
+        serde_yaml::Value::Sequence(seq) => {
+            for (i, v) in seq.iter().enumerate() {
+                let new_prefix = format!("{}.{}", prefix, i);
+                flatten_yaml_value(v, &new_prefix, result);
+            }
+        }
+        other => {
+            result.insert(
+                prefix.to_string(),
+                serde_yaml::to_string(other)
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string(),
+            );
+        }
+    }
+}
+
+fn build_yaml_from_flat(flat: &BTreeMap<String, String>, root: &mut serde_yaml::Value) {
+    for (key, value) in flat {
+        let parts: Vec<&str> = key.split('.').collect();
+        let last = parts.len() - 1;
+
+        // Navigate to the parent of the leaf, creating intermediate nodes as needed
+        let mut node = &mut *root;
+        for i in 0..last {
+            let part = parts[i].to_string();
+            if let serde_yaml::Value::Mapping(map) = node {
+                if !map.contains_key(&serde_yaml::Value::String(part.clone())) {
+                    map.insert(
+                        serde_yaml::Value::String(part.clone()),
+                        serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
+                    );
+                }
+                node = map.get_mut(&serde_yaml::Value::String(part)).unwrap();
+            }
+        }
+
+        // Insert the value at the leaf
+        if let serde_yaml::Value::Mapping(map) = node {
+            let parsed =
+                serde_yaml::from_str(value).unwrap_or(serde_yaml::Value::String(value.clone()));
+            map.insert(serde_yaml::Value::String(parts[last].to_string()), parsed);
+        }
     }
 }

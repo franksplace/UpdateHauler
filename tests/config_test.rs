@@ -237,4 +237,98 @@ cargo_save_file: "/tmp/test/cargo.json"
             "entry should end with logfile-only redirect"
         );
     }
+
+    #[test]
+    fn test_config_init_creates_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("config.yaml");
+
+        Config::config_init(Some(&config_path)).expect("config_init failed");
+
+        assert!(config_path.exists());
+        let content = std::fs::read_to_string(&config_path).expect("Failed to read config");
+        assert!(content.contains("debug:"));
+        assert!(content.contains("schedule:"));
+        assert!(content.contains("plugins:"));
+    }
+
+    #[test]
+    fn test_config_compare_identical() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("config.yaml");
+
+        // Write generated YAML to temp file
+        let yaml = updatehauler::config::generate_sample_yaml();
+        std::fs::write(&config_path, &yaml).expect("Failed to write config");
+
+        // Should succeed with no differences
+        let result = Config::config_compare(Some(&config_path));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_config_compare_different() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("config.yaml");
+
+        // Write a config with different values
+        std::fs::write(
+            &config_path,
+            r#"
+debug: true
+datetime: false
+max_log_lines: 5000
+plugins:
+  brew: false
+  cargo: false
+  nvim: true
+  os: false
+schedule:
+  minute: "30"
+  hour: "15"
+  day_of_month: "1"
+  month: "6"
+  day_of_week: "2"
+"#,
+        )
+        .expect("Failed to write config");
+
+        let result = Config::config_compare(Some(&config_path));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_config_compare_no_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("nonexistent.yaml");
+
+        let result = Config::config_compare(Some(&config_path));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_config_merge_identical_no_changes() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("config.yaml");
+
+        // Write generated YAML (identical to defaults)
+        let yaml = updatehauler::config::generate_sample_yaml();
+        std::fs::write(&config_path, &yaml).expect("Failed to write config");
+
+        // Should succeed with no differences (no interactive prompt)
+        let result = Config::config_merge(Some(&config_path));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_config_merge_missing_file_creates_it() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let config_path = temp_dir.path().join("new_config.yaml");
+
+        assert!(!config_path.exists());
+
+        let result = Config::config_merge(Some(&config_path));
+        assert!(result.is_ok());
+        assert!(config_path.exists());
+    }
 }

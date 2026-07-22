@@ -64,7 +64,12 @@ ACTIONS:
    schedule check       Check current scheduling status
 
  Maintenance Actions:
-   trim-logfile         Trim logfile to max lines
+    trim-logfile         Trim logfile to max lines
+
+ Config Actions:
+    config init          Generate default config file
+    config compare       Compare default config with local config
+    config merge         Interactive merge from defaults into local config
 
  Self-Installation Actions:
    install              Install this script to system
@@ -92,7 +97,10 @@ ACTIONS:
    updatehauler --only brew                               # Run only the brew plugin
    updatehauler brew help                                 # Show detailed help for brew plugin
    updatehauler install-completions                       # Install shell completions
-   updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
+    updatehauler --completionsdir ~/.local/share bash zsh  # Custom completion dir
+    updatehauler config init                               # Generate config file
+    updatehauler config compare                            # Compare config with defaults
+    updatehauler config merge                              # Interactive merge config
  "#,
     );
 
@@ -195,8 +203,9 @@ fn generate_custom_bash_completion(config: &Config) -> String {
 
 _{app_name}() {{
     local cur prev words cword
-        local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem gem-save gem-restore go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
+        local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem gem-save gem-restore go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init config install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
+    local config_commands="init compare merge"
     local shell_types="bash zsh fish powershell elvish"
     local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --no-sudo --brew-sudo --confirm-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
 
@@ -218,6 +227,8 @@ _{app_name}() {{
         *)
             if [[ $prev == "schedule" ]]; then
                 COMPREPLY=($(compgen -W "$schedule_commands" -- "$cur"))
+            elif [[ $prev == "config" ]]; then
+                COMPREPLY=($(compgen -W "$config_commands" -- "$cur"))
             elif [[ $prev == "install-completions" ]]; then
                 COMPREPLY=($(compgen -W "$shell_types" -- "$cur"))
             fi
@@ -279,6 +290,7 @@ _{app_name}() {{
         'install:Install this script to system'
         'update:Update this script on the system'
         'remove:Remove this script from system'
+        'config:Manage configuration files'
         'install-completions:Install shell completions'
         'trim-logfile:Trim logfile to max lines'
     )
@@ -287,6 +299,12 @@ _{app_name}() {{
         'enable:Enable scheduled updates (cron on Linux, launchd on macOS)'
         'disable:Disable scheduled updates'
         'check:Check current scheduling status'
+    )
+
+    local -a config_subcommands=(
+        'init:Generate default config file'
+        'compare:Compare default config with local config'
+        'merge:Interactive merge from defaults into local config'
     )
 
     local -a shell_types=(
@@ -344,6 +362,9 @@ _{app_name}() {{
         case $prev_cmd in
             schedule)
                 _describe -t commands 'schedule subcommands' schedule_subcommands
+                ;;
+            config)
+                _describe -t commands 'config subcommands' config_subcommands
                 ;;
             install-completions)
                 _describe -t commands 'shell types' shell_types
@@ -671,6 +692,7 @@ struct Args {
             "yarn-save",
             "yarn-restore",
             "init",
+            "config",
             "install",
             "update",
             "remove",
@@ -684,6 +706,8 @@ struct Args {
             "enable",
             "disable",
             "check",
+            "compare",
+            "merge",
             "help",
         ])
     )]
@@ -998,10 +1022,28 @@ fn main() -> Result<ExitCode> {
                     _ => anyhow::bail!("Invalid schedule qualifier: {}", qualifier),
                 }
                 no_action = true;
+                break;
             }
             "init" => {
                 generate_config()?;
                 no_action = true;
+            }
+            "config" => {
+                if actions.len() < 2 {
+                    anyhow::bail!("config requires sub-command: init, compare, or merge");
+                }
+                let sub = actions.get(1).unwrap().clone();
+                match sub.as_str() {
+                    "init" => Config::config_init(config_path.as_ref())?,
+                    "compare" => Config::config_compare(config_path.as_ref())?,
+                    "merge" => Config::config_merge(config_path.as_ref())?,
+                    _ => anyhow::bail!(
+                        "Invalid config sub-command: {}. Use init, compare, or merge.",
+                        sub
+                    ),
+                }
+                no_action = true;
+                break;
             }
             _ => {}
         }
