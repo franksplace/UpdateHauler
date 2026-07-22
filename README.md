@@ -83,6 +83,7 @@ updatehauler [OPTIONS] [ACTION]...
 | `--no-color` | Disable color output |
 | `--logfile-only` | Output only to logfile (no stdout) |
 | `--dry-run` | Preview what would be done without making changes (no password prompts, perfect for CI/CD) |
+| `--brew-sudo` | Use sudo for brew upgrade commands (fixes "Operation not permitted" on cask postinstall scripts) |
 | `--notify` | Send desktop notification when updates complete (uses `osascript` on macOS, `notify-send` on Linux) |
 | `--config <FILE>` | YAML configuration file path (default: `~/.config/updatehauler/config.yaml`) |
 | `--logfile <FILE>` | Specify custom logfile location (default: `~/.local/updates.log`) |
@@ -384,6 +385,9 @@ dry_run: false
 max_log_lines: 10000
 # logfile: ~/.local/updates.log
 
+# Use sudo for brew upgrade commands (fixes cask postinstall errors)
+# brew_sudo: false
+
 # Installation and paths
 # installdir: ~/.local/bin
 
@@ -432,6 +436,7 @@ plugins:
 | `color` | bool | Enable color output |
 | `use_log` | bool | Enable logging to file |
 | `dry_run` | bool | Enable dry-run mode |
+| `brew_sudo` | bool | Use sudo for brew upgrade commands |
 | `notify` | bool | Enable desktop notifications |
 | `max_log_lines` | number | Maximum log lines before rotation |
 | `logfile` | string | Custom log file path |
