@@ -19,6 +19,9 @@ use_log: false
 # Dry-run mode - show what would be done without making changes
 dry_run: false
 
+# Use sudo for brew upgrade commands (fixes "Operation not permitted" on cask postinstall scripts)
+# brew_sudo: false
+
 # Send desktop notification when updates complete
 # notify: true
 

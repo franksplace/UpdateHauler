@@ -198,7 +198,7 @@ _{app_name}() {{
         local commands="brew brew-save brew-restore brew-list brew-outdated brew-upgrade-pinned cargo cargo-save cargo-restore cargo-list cargo-outdated deno docker flatpak gem gem-save gem-restore go go-save go-restore npm npm-save npm-restore nvim nvim-save nvim-restore nvim-list nvim-clean nvim-health os pip pip-save pip-restore run rustup snap uv uv-save uv-restore uv-list uvx vscode yarn yarn-save yarn-restore init schedule install update remove install-completions trim-logfile"
     local schedule_commands="enable disable check"
     local shell_types="bash zsh fish powershell elvish"
-    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --no-sudo --confirm-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
+    local flags="--debug --no-debug --datetime --no-datetime --header --no-header --color --no-color --logfile-only --dry-run --no-sudo --brew-sudo --confirm-run --notify --logfile --max-log-lines --installdir --brew-save-file --cargo-save-file --npm-save-file --pip-save-file --uv-save-file --completionsdir --sched-minute --sched-hour --sched-day-of-month --sched-month --sched-day-of-week --config-file --cmd --list-plugins --only --enable-plugin --disable-plugin --help --version"
 
     cur="${{COMP_WORDS[COMP_CWORD]}}"
     prev="${{COMP_WORDS[COMP_CWORD-1]}}"
@@ -309,6 +309,7 @@ _{app_name}() {{
         '--logfile-only[Enable output to only logfile]' \
         '--dry-run[Dry-run mode - show what would be done without making changes]' \
         '--no-sudo[Skip sudo elevation - run commands as current user]' \
+        '--brew-sudo[Use sudo for brew upgrade commands (fixes cask postinstall errors)]' \
         '--confirm-run[Prompt for confirmation before running arbitrary commands]' \
         '--notify[Send desktop notification when updates complete]' \
         '--logfile+[Logfile to use]:FILE:_files' \
@@ -481,6 +482,12 @@ struct Args {
 
     #[arg(long, help = "Skip sudo elevation - run commands as current user")]
     no_sudo: bool,
+
+    #[arg(
+        long,
+        help = "Use sudo for brew upgrade commands (fixes cask postinstall errors)"
+    )]
+    brew_sudo: bool,
 
     #[arg(
         long,
@@ -702,6 +709,7 @@ fn main() -> Result<ExitCode> {
     }
     config.dry_run = args.dry_run;
     config.no_sudo = args.no_sudo;
+    config.brew_sudo = args.brew_sudo;
     config.confirm_run = args.confirm_run;
     config.notify = args.notify;
     if let Some(logfile) = args.logfile {

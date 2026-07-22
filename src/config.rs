@@ -28,6 +28,9 @@ dry_run: false
 # Skip sudo elevation - run commands as current user
 # no_sudo: false
 
+# Use sudo for brew upgrade commands (fixes "Operation not permitted" on cask postinstall scripts)
+# brew_sudo: false
+
 # Prompt for confirmation before running arbitrary commands
 # confirm_run: false
 
@@ -133,6 +136,7 @@ pub struct ConfigFile {
     pub dry_run: Option<bool>,
     pub notify: Option<bool>,
     pub no_sudo: Option<bool>,
+    pub brew_sudo: Option<bool>,
     pub confirm_run: Option<bool>,
     pub max_log_lines: Option<usize>,
     pub logfile: Option<String>,
@@ -194,6 +198,7 @@ pub struct Config {
     pub use_log: bool,
     pub dry_run: bool,
     pub no_sudo: bool,
+    pub brew_sudo: bool,
     pub confirm_run: bool,
     pub log: PathBuf,
     pub brew_file: PathBuf,
@@ -233,6 +238,7 @@ impl Config {
             use_log: false,
             dry_run: false,
             no_sudo: false,
+            brew_sudo: false,
             confirm_run: false,
             log: home_path.join(".local/updates.log"),
             brew_file: PathBuf::new(),
@@ -305,6 +311,9 @@ impl Config {
         }
         if let Some(no_sudo) = config_file_yaml.no_sudo {
             config.no_sudo = no_sudo;
+        }
+        if let Some(brew_sudo) = config_file_yaml.brew_sudo {
+            config.brew_sudo = brew_sudo;
         }
         if let Some(confirm_run) = config_file_yaml.confirm_run {
             config.confirm_run = confirm_run;

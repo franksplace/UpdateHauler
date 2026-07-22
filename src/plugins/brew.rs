@@ -6,6 +6,20 @@ use crate::insights::Insights;
 use crate::logger::Logger;
 use anyhow::Result;
 
+fn brew_run_cmd(
+    config: &Config,
+    logger: &mut Logger,
+    show_error: bool,
+    command: &str,
+    args: &[&str],
+) -> Result<()> {
+    if config.brew_sudo {
+        super::run_with_sudo(config, logger, show_error, command, args)
+    } else {
+        super::run_cmd(config, logger, show_error, command, args)
+    }
+}
+
 pub struct BrewPlugin;
 
 #[async_trait]
@@ -72,15 +86,15 @@ impl Plugin for BrewPlugin {
     ) -> Result<bool> {
         match action_name {
             "brew-list" => {
-                super::run_cmd(config, logger, true, "brew", &["list"])?;
+                brew_run_cmd(config, logger, true, "brew", &["list"])?;
                 Ok(true)
             }
             "brew-outdated" => {
-                super::run_cmd(config, logger, true, "brew", &["outdated"])?;
+                brew_run_cmd(config, logger, true, "brew", &["outdated"])?;
                 Ok(true)
             }
             "brew-upgrade-pinned" => {
-                super::run_cmd(config, logger, true, "brew", &["upgrade", "--pinned"])?;
+                brew_run_cmd(config, logger, true, "brew", &["upgrade", "--pinned"])?;
                 Ok(true)
             }
             "brew-info" => {
@@ -111,11 +125,11 @@ impl Plugin for BrewPlugin {
             return Ok(());
         }
 
-        super::run_cmd(config, logger, true, "brew", &["update"])?;
-        super::run_cmd(config, logger, true, "brew", &["upgrade", "--yes"])?;
-        super::run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
-        let _ = super::run_cmd(config, logger, false, "brew", &["doctor", "-q"]);
-        super::run_cmd(
+        brew_run_cmd(config, logger, true, "brew", &["update"])?;
+        brew_run_cmd(config, logger, true, "brew", &["upgrade", "--yes"])?;
+        brew_run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
+        let _ = brew_run_cmd(config, logger, false, "brew", &["doctor", "-q"]);
+        brew_run_cmd(
             config,
             logger,
             true,
@@ -128,7 +142,7 @@ impl Plugin for BrewPlugin {
             .run()
             .is_ok()
         {
-            super::run_cmd(
+            brew_run_cmd(
                 config,
                 logger,
                 true,
@@ -136,8 +150,8 @@ impl Plugin for BrewPlugin {
                 &["cu", "-a", "-f", "--cleanup", "-y"],
             )?;
         }
-        super::run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
-        let _ = super::run_cmd(config, logger, false, "brew", &["doctor", "--verbose"]);
+        brew_run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
+        let _ = brew_run_cmd(config, logger, false, "brew", &["doctor", "--verbose"]);
 
         Ok(())
     }
@@ -155,7 +169,7 @@ impl Plugin for BrewPlugin {
 
         logger.log(&format!("Generating brew's {} save file", brew_file));
 
-        super::run_cmd(
+        brew_run_cmd(
             config,
             logger,
             true,
@@ -188,7 +202,7 @@ impl Plugin for BrewPlugin {
             return Ok(());
         }
 
-        super::run_cmd(
+        brew_run_cmd(
             config,
             logger,
             true,
