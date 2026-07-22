@@ -19,25 +19,18 @@ mod tests {
             return;
         }
 
-        // On Linux CI, crontab is not available, so test schedule check with --dry-run instead
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
-                "--sched-minute",
-                "30",
-                "--sched-hour",
-                "14",
+                "schedule", "check",
+                "--minute", "30",
+                "--hour", "14",
                 "--dry-run",
-                "schedule",
-                "check",
             ]
         } else {
             vec![
-                "--sched-minute",
-                "30",
-                "--sched-hour",
-                "14",
-                "schedule",
-                "enable",
+                "schedule", "enable",
+                "--minute", "30",
+                "--hour", "14",
             ]
         };
 
@@ -66,15 +59,9 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec![
-                "--sched-day-of-month",
-                "15",
-                "--dry-run",
-                "schedule",
-                "check",
-            ]
+            vec!["schedule", "check", "--day-of-month", "15", "--dry-run"]
         } else {
-            vec!["--sched-day-of-month", "15", "schedule", "enable"]
+            vec!["schedule", "enable", "--day-of-month", "15"]
         };
 
         let output = Command::new(&binary)
@@ -94,9 +81,9 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["--sched-month", "12", "--dry-run", "schedule", "check"]
+            vec!["schedule", "check", "--month", "12", "--dry-run"]
         } else {
-            vec!["--sched-month", "12", "schedule", "enable"]
+            vec!["schedule", "enable", "--month", "12"]
         };
 
         let output = Command::new(&binary)
@@ -116,15 +103,9 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec![
-                "--sched-day-of-week",
-                "MWF",
-                "--dry-run",
-                "schedule",
-                "check",
-            ]
+            vec!["schedule", "check", "--day-of-week", "MWF", "--dry-run"]
         } else {
-            vec!["--sched-day-of-week", "MWF", "schedule", "enable"]
+            vec!["schedule", "enable", "--day-of-week", "MWF"]
         };
 
         let output = Command::new(&binary)
@@ -145,34 +126,22 @@ mod tests {
 
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
-                "--sched-minute",
-                "45",
-                "--sched-hour",
-                "16",
-                "--sched-day-of-month",
-                "1",
-                "--sched-month",
-                "1",
-                "--sched-day-of-week",
-                "M",
+                "schedule", "check",
+                "--minute", "45",
+                "--hour", "16",
+                "--day-of-month", "1",
+                "--month", "1",
+                "--day-of-week", "M",
                 "--dry-run",
-                "schedule",
-                "check",
             ]
         } else {
             vec![
-                "--sched-minute",
-                "45",
-                "--sched-hour",
-                "16",
-                "--sched-day-of-month",
-                "1",
-                "--sched-month",
-                "1",
-                "--sched-day-of-week",
-                "M",
-                "schedule",
-                "enable",
+                "schedule", "enable",
+                "--minute", "45",
+                "--hour", "16",
+                "--day-of-month", "1",
+                "--month", "1",
+                "--day-of-week", "M",
             ]
         };
 
@@ -200,7 +169,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["--dry-run", "schedule", "check"]
+            vec!["schedule", "check", "--dry-run"]
         } else {
             vec!["schedule", "enable"]
         };
@@ -215,8 +184,6 @@ mod tests {
         assert!(output.status.success());
 
         if cfg!(target_os = "macos") {
-            // Verify that enabling schedule doesn't produce "Boot-out failed" error
-            // This error occurs when trying to bootout a non-existent service
             assert!(!stderr.contains("Boot-out failed"));
             assert!(!stderr.contains("No such process"));
         }

@@ -66,10 +66,11 @@ UpdateHauler now uses a modular plugin architecture:
 ## Usage
 
 ```bash
-updatehauler [OPTIONS] [ACTION]...
+updatehauler [OPTIONS] <PLUGIN> [ACTION] [PLUGIN-OPTIONS]
+updatehauler [OPTIONS] <COMMAND>
 ```
 
-### Options
+### Global Options
 
 | Option | Description |
 |--------|-------------|
@@ -82,120 +83,62 @@ updatehauler [OPTIONS] [ACTION]...
 | `--color` | Enable color output (default) |
 | `--no-color` | Disable color output |
 | `--logfile-only` | Output only to logfile (no stdout) |
-| `--dry-run` | Preview what would be done without making changes (no password prompts, perfect for CI/CD) |
-| `--brew-sudo` | Use sudo for brew upgrade commands (fixes "Operation not permitted" on cask postinstall scripts) |
-| `--notify` | Send desktop notification when updates complete (uses `osascript` on macOS, `notify-send` on Linux) |
-| `--config <FILE>` | YAML configuration file path (default: `~/.config/updatehauler/config.yaml`) |
-| `--logfile <FILE>` | Specify custom logfile location (default: `~/.local/updates.log`) |
-| `--max-log-lines <N>` | Set maximum logfile lines for rotation (default: 10000) |
-| `--installdir <PATH>` | Set installation directory (default: `~/.local/bin`) |
-| `--brew-save-file <FILE>` | Specify custom brew save file location (default: `~/.config/brew/{os}-Brewfile`) |
-| `--cargo-save-file <FILE>` | Specify custom cargo save file location (default: `~/.config/cargo/{os}-{arch}-cargo-backup.json`) |
-| `--enable-plugin <PLUGIN>` | Enable a specific plugin (overrides config file) |
-| `--disable-plugin <PLUGIN>` | Disable a specific plugin (overrides config file) |
-| `--sched-minute <MIN>` | Set schedule minute (default: 0) |
-| `--sched-hour <HOUR>` | Set schedule hour (default: 2) |
-| `--sched-day-of-month <DAY>` | Set schedule day of month (default: *) |
-| `--sched-month <MONTH>` | Set schedule month (default: *) |
-| `--sched-day-of-week <DAY_OF_WEEK>` | Set schedule day of week (supports digits, `*,-/`, and crontab day names like `MON,WED,FRI`) |
-| `--list-plugins` | List all available plugins and their enabled/available status |
-| `--cmd <CMD>...` | Specify a command to run with the `run` action |
+| `--dry-run` | Preview what would be done without making changes |
+| `--no-sudo` | Skip sudo elevation |
+| `--notify` | Send desktop notification when updates complete |
+| `--config-file <FILE>` | YAML configuration file path |
+| `--logfile <FILE>` | Specify custom logfile location |
+| `--max-log-lines <N>` | Set maximum logfile lines for rotation |
+| `--installdir <PATH>` | Set installation directory |
+| `--completionsdir <DIR>` | Set completion install directory |
+| `--enable-plugin <PLUGIN>` | Enable a specific plugin (overrides config) |
+| `--disable-plugin <PLUGIN>` | Disable a specific plugin (overrides config) |
+| `--only <PLUGIN>` | Run only the specified plugin |
+| `--list-plugins` | List all available plugins and their status |
 | `-h, --help` | Show help information |
 | `-V, --version` | Print version information |
 
-### Actions
+### Plugin Subcommands
 
-#### Update Actions
+Each plugin is a subcommand with its own actions and options:
 
-| Action | Description |
-|--------|-------------|
-| `brew` | Update, upgrade, and cleanup brew formulas and casks |
-| `cargo` | Update cargo-installed packages (requires `cargo-install-update`) |
-| `deno` | Upgrade the Deno runtime |
-| `docker` | Clean up unused Docker data (prune images, containers, networks) |
-| `flatpak` | Update Flatpak applications |
-| `gem` | Update Ruby gems |
-| `go` | Update Go modules and tools |
-| `npm` | Update globally installed npm packages |
-| `nvim` | Update Neovim plugins (supports lazy.nvim, packer.nvim, vim-plug) |
-| `os` | Update OS and app-based packages |
-| `pip` | Update pip packages |
-| `run` | Run an arbitrary command with logging |
-| `rustup` | Update Rust toolchains via rustup |
-| `snap` | Update Snap packages |
-| `uv` | Update uv itself and upgrade all installed tools |
-| `vscode` | Update VSCode/Cursor extensions |
-| `yarn` | Update globally installed Yarn/PNPM packages |
+| Plugin | Description | Actions | Plugin Options |
+|--------|-------------|---------|----------------|
+| `brew` | Update, upgrade, and clean brew formulas and casks | `update`, `save`, `restore`, `list`, `outdated`, `upgrade-pinned` | `--save-file`, `--sudo`, `--info`, `--search` |
+| `cargo` | Upgrade cargo installed packages | `update`, `save`, `restore`, `list`, `outdated` | `--save-file` |
+| `npm` | Update globally installed npm packages | `update`, `save`, `restore` | `--save-file` |
+| `pip` | Update pip packages | `update`, `save`, `restore` | `--save-file` |
+| `uv` | Update uv tools | `update`, `save`, `restore`, `list`, `uvx` | `--save-file` |
+| `nvim` | Update Neovim plugins | `update`, `save`, `restore`, `list`, `clean`, `health` | — |
+| `os` | Update OS and app-based packages | `update` | — |
+| `run` | Run an arbitrary command | — | `--cmd` |
+| `deno` | Upgrade the Deno runtime | `update` | — |
+| `docker` | Clean up unused Docker data | `update` | — |
+| `flatpak` | Update Flatpak applications | `update` | — |
+| `gem` | Update Ruby gems | `update`, `save`, `restore` | — |
+| `go` | Update Go modules and tools | `update`, `save`, `restore` | — |
+| `rustup` | Update Rust toolchains | `update` | — |
+| `snap` | Update Snap packages | `update` | — |
+| `vscode` | Update VSCode/Cursor extensions | `update` | — |
+| `yarn` | Update Yarn packages | `update`, `save`, `restore` | — |
 
-#### Backup/Restore Actions
+When no action is specified, the default action is `update`.
 
-| Action | Description |
-|--------|-------------|
-| `brew-save` | Save current brew installation to Brewfile |
-| `brew-restore` | Restore brew installation from Brewfile |
-| `cargo-save` | Save current cargo packages to backup JSON (requires `cargo-backup`) |
-| `cargo-restore` | Restore cargo packages from backup JSON (requires `cargo-restore`) |
-| `npm-save` | Save globally installed npm packages to JSON |
-| `npm-restore` | Restore globally installed npm packages from JSON |
-| `nvim-save` | Note nvim plugin configuration (plugins are defined in your nvim config) |
-| `nvim-restore` | Restore nvim plugins using your configured plugin manager |
-| `pip-save` | Save pip packages to requirements file |
-| `pip-restore` | Restore pip packages from requirements file |
-| `uv-save` | Save installed uv tools list to JSON |
-| `uv-restore` | Restore uv tools from saved JSON |
-| `yarn-save` | Save globally installed Yarn/PNPM packages to JSON |
-| `yarn-restore` | Restore Yarn/PNPM packages from saved JSON |
-| `gem-save` | Save installed Ruby gems list to file |
-| `gem-restore` | Restore Ruby gems from saved list |
-| `go-save` | Save installed Go binaries list |
-| `go-restore` | Restore Go tools from saved list |
+### Commands
 
-#### Utility Actions
-
-| Action | Description |
-|--------|-------------|
-| `brew-list` | List all installed brew formulas |
-| `brew-outdated` | Show outdated brew formulas and casks |
-| `brew-upgrade-pinned` | Upgrade only pinned brew formulas |
-| `brew-info` | Show information about a brew formula or cask |
-| `brew-search` | Search for brew formulas and casks |
-| `cargo-list` | List all installed cargo packages |
-| `cargo-outdated` | Show outdated cargo packages (requires `cargo-outdated`) |
-| `nvim-list` | List installed nvim plugins |
-| `nvim-clean` | Clean unused nvim plugins |
-| `nvim-health` | Check nvim plugin health |
-| `uv-list` | List installed uv tools |
-| `uvx` | Run a tool with uvx |
-
-#### Scheduling Actions
-
-| Action | Description |
-|--------|-------------|
-| `schedule enable` | Enable scheduled updates (cron on Linux, launchd on macOS) |
+| Command | Description |
+|---------|-------------|
+| `schedule enable [--hour H] [--minute M] [--day-of-month D] [--month M] [--day-of-week D]` | Enable scheduled updates |
 | `schedule disable` | Disable scheduled updates |
 | `schedule check` | Check current scheduling status |
-
-#### Maintenance Actions
-
-| Action | Description |
-|--------|-------------|
-| `trim-logfile` | Trim logfile to maximum lines |
-
-#### Config Actions
-
-| Action | Description |
-|--------|-------------|
 | `config init` | Generate default config file |
 | `config compare` | Compare default config with local config |
 | `config merge` | Interactive merge from defaults into local config |
-
-#### Self-Installation Actions
-
-| Action | Description |
-|--------|-------------|
 | `install` | Install updatehauler to system |
 | `update` | Update installed updatehauler binary |
 | `remove` | Remove updatehauler from system |
+| `install-completions [SHELLS...]` | Install shell completions |
+| `trim-logfile` | Trim logfile to maximum lines |
 
 ### Default Behavior
 
@@ -241,55 +184,55 @@ updatehauler os
 
 ### Update brew and save configuration
 ```bash
-updatehauler brew brew-save
+updatehauler brew update && updatehauler brew save
 ```
 
 ### Update npm and pip
 ```bash
-updatehauler npm pip
+updatehauler npm update && updatehauler pip update
 ```
 
 ### List or check specific plugins
 ```bash
-updatehauler brew-list            # List installed brew formulas
-updatehauler brew-outdated        # Show outdated brew packages
-updatehauler cargo-outdated       # Show outdated cargo packages
-updatehauler nvim-health          # Check nvim plugin health
+updatehauler brew list            # List installed brew formulas
+updatehauler brew outdated        # Show outdated brew packages
+updatehauler cargo outdated       # Show outdated cargo packages
+updatehauler nvim health          # Check nvim plugin health
 ```
 
 ### Save to custom backup file locations
 ```bash
-updatehauler --brew-save-file "/custom/path/Brewfile" brew-save
-updatehauler --cargo-save-file "/custom/path/cargo-backup.json" cargo-save
+updatehauler brew save --save-file "/custom/path/Brewfile"
+updatehauler cargo save --save-file "/custom/path/cargo-backup.json"
 ```
 
 ### Enable/disable plugins at runtime
 ```bash
-updatehauler --enable-plugin nvim               # Enable nvim for this run
-updatehauler --disable-plugin cargo pip         # Disable cargo and pip for this run
+updatehauler --enable-plugin nvim brew update      # Enable nvim for this run
+updatehauler --disable-plugin cargo pip update     # Disable cargo and pip for this run
 ```
 
 ### Run with debug output
 ```bash
-updatehauler --debug
+updatehauler --debug brew update
 ```
 
 ### Desktop notifications on completion
 ```bash
-updatehauler --notify
+updatehauler --notify brew update
 ```
 
 ### Dry-run mode - preview changes
 ```bash
 # See what would be updated without actually updating
-updatehauler --dry-run
+updatehauler --dry-run brew update
 
 # Dry-run specific actions
-updatehauler --dry-run os
-updatehauler --dry-run brew cargo
+updatehauler --dry-run os update
+updatehauler --dry-run brew update && updatehauler --dry-run cargo update
 
 # Dry-run with custom schedule time
-updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule enable
+updatehauler --dry-run schedule enable --hour 3 --minute 30
 
 # Dry-run a custom command
 updatehauler --dry-run run --cmd "echo test"
@@ -303,13 +246,13 @@ updatehauler schedule enable
 ### Schedule updates for specific time
 ```bash
 # Schedule for 3:30 PM
-updatehauler --sched-hour "15" --sched-minute "30" schedule enable
+updatehauler schedule enable --hour 15 --minute 30
 
 # Schedule for 1st day of month at 2 AM
-updatehauler --sched-day-of-month "1" schedule enable
+updatehauler schedule enable --day-of-month 1
 
 # Schedule for Monday, Wednesday, Friday at 10 AM
-updatehauler --sched-day-of-week "MON,WED,FRI" --sched-hour "10" schedule enable
+updatehauler schedule enable --day-of-week "MON,WED,FRI" --hour 10
 ```
 
 ### Check scheduling status
@@ -319,18 +262,18 @@ updatehauler schedule check
 
 ### Restore from backup
 ```bash
-updatehauler brew-restore
-updatehauler cargo-restore
-updatehauler npm-restore
-updatehauler pip-restore
+updatehauler brew restore
+updatehauler cargo restore
+updatehauler npm restore
+updatehauler pip restore
 ```
 
 ### Manage configuration
 ```bash
-updatehauler config init                                    # Generate default config file
-updatehauler config compare                                 # Compare config with defaults
-updatehauler config merge                                   # Interactive merge config
-updatehauler --config ~/.config/custom.yaml config compare  # Compare custom config
+updatehauler config init                              # Generate default config file
+updatehauler config compare                           # Compare config with defaults
+updatehauler config merge                             # Interactive merge config
+updatehauler --config-file ~/.config/custom.yaml config compare  # Compare custom config
 ```
 
 ### Install to system
@@ -340,7 +283,7 @@ updatehauler install
 
 ### Run arbitrary command with logging
 ```bash
-updatehauler run --cmd echo "Hello World"
+updatehauler run --cmd "echo Hello World"
 ```
 
 ## Dependencies
@@ -370,10 +313,10 @@ updatehauler run --cmd echo "Hello World"
 ### Custom Configuration
 
 #### Command-Line Options
-All default locations can be overridden using command-line options:
+All default locations can be overridden using plugin subcommand options:
+- `--save-file` to specify a custom save file for the plugin
 - `--logfile` to specify a custom log file location
-- `--brew-save-file` to specify a custom brew backup file
-- `--cargo-save-file` to specify a custom cargo backup file
+- `--installdir` to specify a custom installation directory
 - `--installdir` to specify a custom installation directory
 
 #### YAML Configuration File
@@ -382,7 +325,7 @@ UpdateHauler supports an optional YAML configuration file for more advanced cust
 
 **Default location:** `~/.config/updatehauler/config.yaml`
 
-**Custom location:** Use `--config` flag to specify a custom path
+**Custom location:** Use `--config-file` flag to specify a custom path
 
 Example configuration:
 
@@ -540,10 +483,10 @@ updatehauler --dry-run os
 updatehauler --dry-run schedule enable
 
 # Preview with custom schedule time
-updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check
+updatehauler --dry-run schedule enable --hour 3 --minute 30
 
 # Preview brew and cargo updates
-updatehauler --dry-run brew brew-save cargo cargo-save
+updatehauler --dry-run brew update && updatehauler --dry-run cargo update
 ```
 
 ## What UpdateHauler Does
@@ -616,8 +559,8 @@ updatehauler install-completions elvish
 
 Once enabled, completions will automatically suggest:
 - Plugins: `brew`, `cargo`, `deno`, `docker`, `flatpak`, `gem`, `go`, `npm`, `nvim`, `os`, `pip`, `run`, `rustup`, `snap`, `uv`, `vscode`, `yarn`
-- Actions: `brew-save`, `brew-restore`, `cargo-save`, etc. with descriptions
-- Commands: `install`, `update`, `remove`, `install-completions`
+- Actions per plugin: `update`, `save`, `restore`, `list`, `outdated`, etc. with descriptions
+- Commands: `install`, `update`, `remove`, `install-completions`, `schedule`, `config`
 - Schedule subcommands: `enable`, `disable`, `check` (after `schedule`)
 - Config subcommands: `init`, `compare`, `merge` (after `config`)
 - Shell types: `bash`, `zsh`, `fish`, `powershell`, `elvish` (after `install-completions`)
@@ -640,7 +583,7 @@ UpdateHauler is designed to work well in CI/CD pipelines:
 
 # Test specific actions
 - name: Test backup commands
-  run: ./updatehauler --dry-run brew-save cargo-save
+  run: ./updatehauler --dry-run brew save && ./updatehauler --dry-run cargo save
 ```
 
 ### GitHub Actions Example
@@ -659,7 +602,7 @@ jobs:
       - name: Test schedule configuration
         run: updatehauler --dry-run schedule check
       - name: Preview updates
-        run: updatehauler --dry-run os brew
+        run: updatehauler --dry-run os update && updatehauler --dry-run brew update
 ```
 
 ### Benefits in CI/CD
@@ -782,7 +725,7 @@ This test suite validates:
 - Real-time output streaming
 - Error handling for invalid actions
 - All flag combinations (--no-color, --no-datetime, --no-header, --debug)
-- Custom file paths (--logfile, --max-log-lines, --installdir, --brew-save-file, --cargo-save-file)
+- Custom file paths (--logfile, --max-log-lines, --installdir, --save-file)
 - Multiple action execution
 
 The release binary will be located at `target/release/updatehauler`.

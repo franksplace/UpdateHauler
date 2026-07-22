@@ -16,7 +16,6 @@ mod tests {
         let binary = get_updatehauler_binary();
 
         if !binary.exists() {
-            // Skip test if binary not built
             return;
         }
 
@@ -30,7 +29,9 @@ mod tests {
         assert!(output.status.success());
         assert!(stdout.contains("Usage:"));
         assert!(stdout.contains("OPTIONS"));
-        assert!(stdout.contains("ACTION"));
+        assert!(stdout.contains("brew"));
+        assert!(stdout.contains("cargo"));
+        assert!(stdout.contains("schedule"));
     }
 
     #[test]
@@ -64,7 +65,6 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        // Should fail for invalid actions with clap validation
         assert!(!output.status.success());
     }
 
@@ -145,20 +145,15 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["brew", "help"])
+            .args(["brew", "--help"])
             .output()
             .expect("Failed to execute updatehauler");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(output.status.success());
-        assert!(stdout.contains("Plugin: brew"));
-        assert!(stdout.contains("Description:"));
-        assert!(stdout.contains("Available Actions:"));
         assert!(stdout.contains("brew"));
-        assert!(stdout.contains("brew-save"));
-        assert!(stdout.contains("brew-restore"));
-        assert!(stdout.contains("Examples:"));
+        assert!(stdout.contains("Update, upgrade"));
     }
 
     #[test]
@@ -170,20 +165,15 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["cargo", "help"])
+            .args(["cargo", "--help"])
             .output()
             .expect("Failed to execute updatehauler");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(output.status.success());
-        assert!(stdout.contains("Plugin: cargo"));
-        assert!(stdout.contains("Description:"));
-        assert!(stdout.contains("Available Actions:"));
         assert!(stdout.contains("cargo"));
-        assert!(stdout.contains("cargo-save"));
-        assert!(stdout.contains("cargo-restore"));
-        assert!(stdout.contains("Examples:"));
+        assert!(stdout.contains("Upgrade cargo"));
     }
 
     #[test]
@@ -195,20 +185,15 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["nvim", "help"])
+            .args(["nvim", "--help"])
             .output()
             .expect("Failed to execute updatehauler");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(output.status.success());
-        assert!(stdout.contains("Plugin: nvim"));
-        assert!(stdout.contains("Description:"));
-        assert!(stdout.contains("Available Actions:"));
         assert!(stdout.contains("nvim"));
-        assert!(stdout.contains("nvim-save"));
-        assert!(stdout.contains("nvim-restore"));
-        assert!(stdout.contains("Examples:"));
+        assert!(stdout.contains("Neovim"));
     }
 
     #[test]
@@ -220,18 +205,15 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["os", "help"])
+            .args(["os", "--help"])
             .output()
             .expect("Failed to execute updatehauler");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(output.status.success());
-        assert!(stdout.contains("Plugin: os"));
-        assert!(stdout.contains("Description:"));
-        assert!(stdout.contains("Available Actions:"));
         assert!(stdout.contains("os"));
-        assert!(stdout.contains("Examples:"));
+        assert!(stdout.contains("OS"));
     }
 
     #[test]
@@ -243,7 +225,7 @@ mod tests {
         }
 
         let output = Command::new(&binary)
-            .args(["invalid-plugin", "help"])
+            .args(["invalid-plugin", "--help"])
             .output()
             .expect("Failed to execute updatehauler");
 
@@ -251,8 +233,70 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        // With clap PossibleValuesParser, error comes from clap validation
-        assert!(stdout.contains("invalid value") || stderr.contains("invalid value"));
-        assert!(stdout.contains("possible values:") || stderr.contains("possible values:"));
+        assert!(
+            stdout.contains("invalid") || stderr.contains("invalid")
+                || stdout.contains("error") || stderr.contains("error")
+        );
+    }
+
+    #[test]
+    fn test_plugin_subcommand_actions() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        // Test brew subcommand help shows plugin-specific flags
+        let output = Command::new(&binary)
+            .args(["brew", "--help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success());
+        assert!(stdout.contains("--save-file"));
+        assert!(stdout.contains("--sudo"));
+        assert!(stdout.contains("[ACTION]"));
+    }
+
+    #[test]
+    fn test_schedule_subcommand() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["schedule", "--help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success());
+        assert!(stdout.contains("enable"));
+        assert!(stdout.contains("disable"));
+        assert!(stdout.contains("check"));
+    }
+
+    #[test]
+    fn test_config_subcommand() {
+        let binary = get_updatehauler_binary();
+
+        if !binary.exists() {
+            return;
+        }
+
+        let output = Command::new(&binary)
+            .args(["config", "--help"])
+            .output()
+            .expect("Failed to execute updatehauler");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success());
+        assert!(stdout.contains("init"));
+        assert!(stdout.contains("compare"));
+        assert!(stdout.contains("merge"));
     }
 }

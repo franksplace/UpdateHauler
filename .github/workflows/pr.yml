@@ -195,7 +195,7 @@ jobs:
       - name: Test dry-run for backup commands
         run: |
           echo "Testing dry-run for backup commands..."
-          ./target/release/updatehauler --dry-run brew-save cargo-save
+          ./target/release/updatehauler --dry-run brew save && ./target/release/updatehauler --dry-run cargo save
 
           # Should not crash even if tools aren't installed
           if [ $? -ne 0 ]; then
@@ -206,10 +206,10 @@ jobs:
       - name: Test dry-run with custom schedule
         run: |
           echo "Testing dry-run with custom schedule..."
-          ./target/release/updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check
+          ./target/release/updatehauler --dry-run schedule enable --hour 3 --minute 30
 
           # Check for platform-specific schedule output
-          SCHEDULE_OUTPUT=$(./target/release/updatehauler --dry-run --sched-hour "3" --sched-minute "30" schedule check 2>&1)
+          SCHEDULE_OUTPUT=$(./target/release/updatehauler --dry-run schedule check 2>&1)
 
           # macOS checks for LaunchAgent plist, Linux checks for crontab info
           if echo "$SCHEDULE_OUTPUT" | grep -q "LaunchAgent plist\|LaunchAgent plist:\|crontab at all"; then
