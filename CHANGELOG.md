@@ -5,6 +5,26 @@ All notable changes to UpdateHauler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Changed
+- **Plugin subcommands**: Replaced flat action syntax (`brew-save`) with subcommand syntax (`brew save`). Each plugin is now a subcommand with its own actions and flags.
+- **Schedule flags moved**: `--sched-hour`, `--sched-minute`, etc. moved to `schedule enable` subcommand (`schedule enable --hour 3`).
+- **Config CLI flag**: `--config` renamed to `--config-file` for clarity.
+
+### Added
+- **Cargo install detection**: Detects if binary was installed via `cargo install` (checks `~/.cargo/bin/`). For cargo-installed binaries:
+  - `install` → error with guidance to use `cargo install updatehauler`
+  - `update` → runs `cargo install updatehauler` to update from crates.io
+  - `remove` → error with guidance to use `cargo uninstall updatehauler`
+  - `--installdir` → warning that it's ignored for cargo installs
+- **Config management**: `config init`, `config compare`, `config merge` subcommands with `serde_yaml` support.
+- **Plugin-specific flags**: `--sudo`, `--info`, `--search` only visible under `brew`; `--save-file` scoped per plugin.
+- **Tab completions fix**: Zsh completions now align all entries uniformly.
+
+### Fixed
+- Zsh tab completion alignment (merged separate `_describe` calls into one combined list).
+
 ## [0.3.1]
 
 ### Security

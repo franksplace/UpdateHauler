@@ -27,6 +27,7 @@ pub struct Insights {
     pub has_yarn: bool,
     pub has_go: bool,
     pub app_abspath: PathBuf,
+    pub is_cargo_install: bool,
 }
 
 impl Insights {
@@ -84,6 +85,14 @@ impl Insights {
         let app_abspath =
             std::env::current_exe().with_context(|| "Failed to get executable path")?;
 
+        let cargo_bin_dir = std::env::var("HOME")
+            .ok()
+            .map(PathBuf::from)
+            .map(|h| h.join(".cargo/bin"));
+        let is_cargo_install = cargo_bin_dir
+            .as_ref()
+            .map_or(false, |d| app_abspath.starts_with(d));
+
         Ok(Self {
             is_root,
             arch: arch_str,
@@ -107,6 +116,7 @@ impl Insights {
             has_yarn,
             has_go,
             app_abspath,
+            is_cargo_install,
         })
     }
 

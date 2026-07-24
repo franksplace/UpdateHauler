@@ -21,17 +21,16 @@ mod tests {
 
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
-                "schedule", "check",
-                "--minute", "30",
-                "--hour", "14",
+                "schedule",
+                "check",
+                "--minute",
+                "30",
+                "--hour",
+                "14",
                 "--dry-run",
             ]
         } else {
-            vec![
-                "schedule", "enable",
-                "--minute", "30",
-                "--hour", "14",
-            ]
+            vec!["schedule", "enable", "--minute", "30", "--hour", "14"]
         };
 
         let output = Command::new(&binary)
@@ -126,22 +125,34 @@ mod tests {
 
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
-                "schedule", "check",
-                "--minute", "45",
-                "--hour", "16",
-                "--day-of-month", "1",
-                "--month", "1",
-                "--day-of-week", "M",
+                "schedule",
+                "check",
+                "--minute",
+                "45",
+                "--hour",
+                "16",
+                "--day-of-month",
+                "1",
+                "--month",
+                "1",
+                "--day-of-week",
+                "M",
                 "--dry-run",
             ]
         } else {
             vec![
-                "schedule", "enable",
-                "--minute", "45",
-                "--hour", "16",
-                "--day-of-month", "1",
-                "--month", "1",
-                "--day-of-week", "M",
+                "schedule",
+                "enable",
+                "--minute",
+                "45",
+                "--hour",
+                "16",
+                "--day-of-month",
+                "1",
+                "--month",
+                "1",
+                "--day-of-week",
+                "M",
             ]
         };
 

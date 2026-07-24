@@ -234,8 +234,10 @@ mod tests {
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         assert!(
-            stdout.contains("invalid") || stderr.contains("invalid")
-                || stdout.contains("error") || stderr.contains("error")
+            stdout.contains("invalid")
+                || stderr.contains("invalid")
+                || stdout.contains("error")
+                || stderr.contains("error")
         );
     }
 

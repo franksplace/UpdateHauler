@@ -9,9 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap_complete::{Shell, generate};
-use updatehauler::config::{
-    Config, has_path_traversal, validate_schedule_value,
-};
+use updatehauler::config::{Config, has_path_traversal, validate_schedule_value};
 use updatehauler::insights::Insights;
 use updatehauler::logger::Logger;
 use updatehauler::scheduler::Scheduler;
@@ -19,9 +17,9 @@ use updatehauler::self_install::SelfInstaller;
 use updatehauler::{
     plugins::BrewPlugin, plugins::CargoPlugin, plugins::DenoPlugin, plugins::DockerPlugin,
     plugins::FlatpakPlugin, plugins::GemPlugin, plugins::GoPlugin, plugins::NpmPlugin,
-    plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin,
-    plugins::PluginRegistry, plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin,
-    plugins::UvPlugin, plugins::VscodePlugin, plugins::YarnPlugin, register_plugins,
+    plugins::NvimPlugin, plugins::OsPlugin, plugins::PipPlugin, plugins::PluginRegistry,
+    plugins::RunPlugin, plugins::RustupPlugin, plugins::SnapPlugin, plugins::UvPlugin,
+    plugins::VscodePlugin, plugins::YarnPlugin, register_plugins,
 };
 
 fn get_help_text() -> &'static str {
@@ -47,7 +45,8 @@ fn build_help_text() -> String {
    updatehauler --dry-run brew save                        # Preview changes
    updatehauler --list-plugins                             # List all plugins and status
    updatehauler install-completions bash zsh               # Install shell completions
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_plugin_registry() -> PluginRegistry<'static> {
@@ -313,8 +312,8 @@ _{app_name}() {{
         '*:: :->args'
 
     if (( CURRENT == 1 )); then
-        _describe -t plugins 'plugin' plugins
-        _describe -t commands 'command' global_commands
+        local -a all_commands=("${{plugins[@]}}" "${{global_commands[@]}}")
+        _describe -t commands 'command' all_commands
         return
     fi
 
@@ -471,7 +470,11 @@ struct Args {
     #[arg(long, action = clap::ArgAction::SetFalse, help = "Disable debug output (default)")]
     no_debug: bool,
 
-    #[arg(long, default_value = "true", help = "Enable ISO8601 with microseconds (default)")]
+    #[arg(
+        long,
+        default_value = "true",
+        help = "Enable ISO8601 with microseconds (default)"
+    )]
     datetime: bool,
 
     #[arg(long, help = "Disable ISO8601 with microseconds")]
@@ -492,22 +495,40 @@ struct Args {
     #[arg(long, help = "Enable output to only logfile")]
     logfile_only: bool,
 
-    #[arg(long, help = "Dry-run mode - show what would be done without making changes")]
+    #[arg(
+        long,
+        help = "Dry-run mode - show what would be done without making changes"
+    )]
     dry_run: bool,
 
     #[arg(long, help = "Skip sudo elevation - run commands as current user")]
     no_sudo: bool,
 
-    #[arg(long, help = "Prompt for confirmation before running arbitrary commands")]
+    #[arg(
+        long,
+        help = "Prompt for confirmation before running arbitrary commands"
+    )]
     confirm_run: bool,
 
-    #[arg(long, value_name = "FILE", help = "Logfile to use (default: ~/.local/updates.log)")]
+    #[arg(
+        long,
+        value_name = "FILE",
+        help = "Logfile to use (default: ~/.local/updates.log)"
+    )]
     logfile: Option<String>,
 
-    #[arg(long, value_name = "N", help = "Max lines for logfile (default: 10000)")]
+    #[arg(
+        long,
+        value_name = "N",
+        help = "Max lines for logfile (default: 10000)"
+    )]
     max_log_lines: Option<usize>,
 
-    #[arg(long, value_name = "PATH", help = "Location to install this script (default: ~/.local/bin)")]
+    #[arg(
+        long,
+        value_name = "PATH",
+        help = "Location to install this script (default: ~/.local/bin)"
+    )]
     installdir: Option<String>,
 
     #[arg(long, value_name = "DIR", help = "Completion install directory")]
@@ -522,10 +543,18 @@ struct Args {
     #[arg(long, value_name = "PLUGIN", help = "Run only the specified plugin")]
     only: Option<String>,
 
-    #[arg(long, value_name = "PLUGIN", help = "Enable a specific plugin (overrides config)")]
+    #[arg(
+        long,
+        value_name = "PLUGIN",
+        help = "Enable a specific plugin (overrides config)"
+    )]
     enable_plugin: Vec<String>,
 
-    #[arg(long, value_name = "PLUGIN", help = "Disable a specific plugin (overrides config)")]
+    #[arg(
+        long,
+        value_name = "PLUGIN",
+        help = "Disable a specific plugin (overrides config)"
+    )]
     disable_plugin: Vec<String>,
 
     #[arg(long, help = "Send desktop notification when updates complete")]
@@ -802,6 +831,10 @@ fn main() -> Result<ExitCode> {
 
     let insights = Insights::new().context("Failed to detect system information")?;
 
+    if insights.is_cargo_install && args.installdir.is_some() {
+        eprintln!("Warning: --installdir is ignored for cargo-installed binaries. Use `cargo install updatehauler` to manage installation.");
+    }
+
     // Set default save file paths
     config.brew_file = config
         .brew_save_dir
@@ -867,7 +900,13 @@ fn main() -> Result<ExitCode> {
         }
 
         // Plugin subcommands
-        Some(Commands::Brew { action, save_file, sudo, info, search }) => {
+        Some(Commands::Brew {
+            action,
+            save_file,
+            sudo,
+            info,
+            search,
+        }) => {
             config.brew_sudo = sudo;
             apply_save_file(&save_file, &mut config.brew_file)?;
             if let Some(query) = search {
@@ -961,7 +1000,13 @@ fn main() -> Result<ExitCode> {
         // Schedule subcommand
         Some(Commands::Schedule { action }) => {
             match action {
-                ScheduleAction::Enable { hour, minute, day_of_month, month, day_of_week } => {
+                ScheduleAction::Enable {
+                    hour,
+                    minute,
+                    day_of_month,
+                    month,
+                    day_of_week,
+                } => {
                     if let Some(v) = hour {
                         validate_schedule_value(&v, "--hour")?;
                         config.sched_hour = v;
@@ -1029,7 +1074,10 @@ fn main() -> Result<ExitCode> {
             if shells.is_empty() {
                 install_completions(&config, &["bash", "zsh"])?;
             } else {
-                install_completions(&config, &shells.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
+                install_completions(
+                    &config,
+                    &shells.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+                )?;
             }
             return Ok(ExitCode::SUCCESS);
         }
@@ -1125,17 +1173,15 @@ fn map_plugin_action(plugin: &str, action: &str) -> Result<String> {
             } else {
                 anyhow::bail!(
                     "Unknown action '{}' for plugin '{}'. Valid actions: update, save, restore, list, outdated",
-                    other, plugin
+                    other,
+                    plugin
                 );
             }
         }
     }
 }
 
-fn apply_save_file(
-    file: &Option<String>,
-    target: &mut PathBuf,
-) -> Result<()> {
+fn apply_save_file(file: &Option<String>, target: &mut PathBuf) -> Result<()> {
     if let Some(f) = file {
         let p = PathBuf::from(f);
         if has_path_traversal(&p) {

@@ -95,6 +95,47 @@ mod tests {
     }
 
     #[test]
+    fn test_cargo_install_install_errors() {
+        let config = Config::new("/tmp/test");
+        let mut insights = Insights::new().expect("Failed to create Insights");
+        insights.is_cargo_install = true;
+
+        let installer = SelfInstaller::new(&config, &insights);
+        let result = installer.install();
+
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("cargo install"));
+    }
+
+    #[test]
+    fn test_cargo_install_remove_errors() {
+        let config = Config::new("/tmp/test");
+        let mut insights = Insights::new().expect("Failed to create Insights");
+        insights.is_cargo_install = true;
+
+        let installer = SelfInstaller::new(&config, &insights);
+        let result = installer.remove();
+
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("cargo uninstall"));
+    }
+
+    #[test]
+    fn test_cargo_install_update_tries_cargo() {
+        let config = Config::new("/tmp/test");
+        let mut insights = Insights::new().expect("Failed to create Insights");
+        insights.is_cargo_install = true;
+
+        let installer = SelfInstaller::new(&config, &insights);
+        let result = installer.update();
+
+        // Should succeed — runs `cargo install updatehauler` which is a no-op if already installed
+        assert!(result.is_ok());
+    }
+
+    #[test]
     #[ignore] // Skip due to flaky file system behavior in test environment
     fn test_install_creates_directory() {
         let temp_dir = env::temp_dir();

@@ -1,6 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 use crate::config::Config;
 use crate::insights::Insights;
@@ -19,14 +20,39 @@ impl SelfInstaller {
     }
 
     pub fn install(&self) -> Result<()> {
+        if self.insights.is_cargo_install {
+            bail!(
+                "Already installed via cargo. Use `cargo install {}` to reinstall.",
+                self.config.app_name
+            );
+        }
         self.copy_binary("Installing", "Installed", "to install")
     }
 
     pub fn update(&self) -> Result<()> {
+        if self.insights.is_cargo_install {
+            println!("Updating {} via cargo...", self.config.app_name);
+            let status = Command::new("cargo")
+                .args(["install", &self.config.app_name])
+                .status()
+                .context("Failed to run cargo install. Is cargo installed?")?;
+            if status.success() {
+                println!("Successfully updated {}", self.config.app_name);
+            } else {
+                bail!("cargo install failed with exit code {:?}", status.code());
+            }
+            return Ok(());
+        }
         self.copy_binary("Updating", "Updated", "to update")
     }
 
     pub fn remove(&self) -> Result<()> {
+        if self.insights.is_cargo_install {
+            bail!(
+                "Installed via cargo. Use `cargo uninstall {}` to remove.",
+                self.config.app_name
+            );
+        }
         let install_path = self.config.app_install_dir.join(&self.config.app_name);
 
         if install_path.exists() {
