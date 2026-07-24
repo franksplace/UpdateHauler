@@ -31,6 +31,10 @@ impl<'a> Scheduler<'a> {
     }
 
     pub fn enable(&mut self) -> Result<()> {
+        if self.config.dry_run {
+            self.logger.log("Would enable schedule (DRY-RUN)");
+            return Ok(());
+        }
         if self.insights.is_darwin {
             self.darwin_enable()
         } else {
@@ -39,6 +43,10 @@ impl<'a> Scheduler<'a> {
     }
 
     pub fn disable(&mut self) -> Result<()> {
+        if self.config.dry_run {
+            self.logger.log("Would disable schedule (DRY-RUN)");
+            return Ok(());
+        }
         if self.insights.is_darwin {
             self.darwin_disable()
         } else {
