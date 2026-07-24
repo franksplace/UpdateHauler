@@ -21,13 +21,13 @@ mod tests {
 
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
+                "--dry-run",
                 "schedule",
                 "enable",
                 "--minute",
                 "30",
                 "--hour",
                 "14",
-                "--dry-run",
             ]
         } else {
             vec!["schedule", "enable", "--minute", "30", "--hour", "14"]
@@ -41,7 +41,13 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        assert!(output.status.success());
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
 
         if cfg!(target_os = "macos") {
             assert!(stdout.contains("pmset") || stderr.contains("pmset"));
@@ -58,7 +64,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "enable", "--day-of-month", "15", "--dry-run"]
+            vec!["--dry-run", "schedule", "enable", "--day-of-month", "15"]
         } else {
             vec!["schedule", "enable", "--day-of-month", "15"]
         };
@@ -68,7 +74,16 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
     }
 
     #[test]
@@ -80,7 +95,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "enable", "--month", "12", "--dry-run"]
+            vec!["--dry-run", "schedule", "enable", "--month", "12"]
         } else {
             vec!["schedule", "enable", "--month", "12"]
         };
@@ -90,7 +105,16 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
     }
 
     #[test]
@@ -102,7 +126,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "enable", "--day-of-week", "MWF", "--dry-run"]
+            vec!["--dry-run", "schedule", "enable", "--day-of-week", "MWF"]
         } else {
             vec!["schedule", "enable", "--day-of-week", "MWF"]
         };
@@ -112,7 +136,16 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
-        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
     }
 
     #[test]
@@ -125,6 +158,7 @@ mod tests {
 
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
+                "--dry-run",
                 "schedule",
                 "enable",
                 "--minute",
@@ -137,7 +171,6 @@ mod tests {
                 "1",
                 "--day-of-week",
                 "M",
-                "--dry-run",
             ]
         } else {
             vec![
@@ -164,7 +197,13 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        assert!(output.status.success());
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
 
         if cfg!(target_os = "macos") {
             assert!(stdout.contains("16:45:00") || stderr.contains("16:45:00"));
@@ -180,7 +219,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "enable", "--dry-run"]
+            vec!["--dry-run", "schedule", "enable"]
         } else {
             vec!["schedule", "enable"]
         };
@@ -190,9 +229,16 @@ mod tests {
             .output()
             .expect("Failed to execute updatehauler");
 
+        let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        assert!(output.status.success());
+        assert!(
+            output.status.success(),
+            "Command failed: {:?}\nstdout: {}\nstderr: {}",
+            args,
+            stdout,
+            stderr
+        );
 
         if cfg!(target_os = "macos") {
             assert!(!stderr.contains("Boot-out failed"));
