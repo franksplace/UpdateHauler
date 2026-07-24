@@ -286,9 +286,11 @@ jobs:
       - name: Test dry-run for multiple subcommands
         run: |
           echo "Testing dry-run for multiple subcommands..."
-          ./target/release/updatehauler --dry-run os --dry-run brew --dry-run cargo
+          ./target/release/updatehauler --dry-run os
+          ./target/release/updatehauler --dry-run brew
+          ./target/release/updatehauler --dry-run cargo
 
-          if ! ./target/release/updatehauler --dry-run os --dry-run brew 2>&1 | grep -q "DRY-RUN"; then
+          if ! ./target/release/updatehauler --dry-run os 2>&1 | grep -q "DRY-RUN"; then
             echo "::error::Dry-run mode not detected for multiple subcommands"
             exit 1
           fi
