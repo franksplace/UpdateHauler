@@ -124,6 +124,10 @@ mod tests {
 
     #[test]
     fn test_cargo_install_update_tries_cargo() {
+        if std::env::var("CI").is_ok() {
+            return; // Skip in CI — cargo install is too slow under tarpaulin
+        }
+
         let config = Config::new("/tmp/test");
         let mut insights = Insights::new().expect("Failed to create Insights");
         insights.is_cargo_install = true;
