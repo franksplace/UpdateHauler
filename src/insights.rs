@@ -91,7 +91,7 @@ impl Insights {
             .map(|h| h.join(".cargo/bin"));
         let is_cargo_install = cargo_bin_dir
             .as_ref()
-            .map_or(false, |d| app_abspath.starts_with(d));
+            .is_some_and(|d| app_abspath.starts_with(d));
 
         Ok(Self {
             is_root,

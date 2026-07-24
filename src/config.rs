@@ -784,16 +784,16 @@ fn build_yaml_from_flat(flat: &BTreeMap<String, String>, root: &mut serde_yaml::
 
         // Navigate to the parent of the leaf, creating intermediate nodes as needed
         let mut node = &mut *root;
-        for i in 0..last {
-            let part = parts[i].to_string();
+        for part in &parts[..last] {
+            let part = part.to_string();
             if let serde_yaml::Value::Mapping(map) = node {
-                if !map.contains_key(&serde_yaml::Value::String(part.clone())) {
+                if !map.contains_key(serde_yaml::Value::String(part.clone())) {
                     map.insert(
                         serde_yaml::Value::String(part.clone()),
                         serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
                     );
                 }
-                node = map.get_mut(&serde_yaml::Value::String(part)).unwrap();
+                node = map.get_mut(serde_yaml::Value::String(part)).unwrap();
             }
         }
 

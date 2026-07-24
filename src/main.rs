@@ -832,7 +832,9 @@ fn main() -> Result<ExitCode> {
     let insights = Insights::new().context("Failed to detect system information")?;
 
     if insights.is_cargo_install && args.installdir.is_some() {
-        eprintln!("Warning: --installdir is ignored for cargo-installed binaries. Use `cargo install updatehauler` to manage installation.");
+        eprintln!(
+            "Warning: --installdir is ignored for cargo-installed binaries. Use `cargo install updatehauler` to manage installation."
+        );
     }
 
     // Set default save file paths

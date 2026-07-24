@@ -22,7 +22,7 @@ mod tests {
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
                 "schedule",
-                "check",
+                "enable",
                 "--minute",
                 "30",
                 "--hour",
@@ -58,7 +58,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "check", "--day-of-month", "15", "--dry-run"]
+            vec!["schedule", "enable", "--day-of-month", "15", "--dry-run"]
         } else {
             vec!["schedule", "enable", "--day-of-month", "15"]
         };
@@ -80,7 +80,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "check", "--month", "12", "--dry-run"]
+            vec!["schedule", "enable", "--month", "12", "--dry-run"]
         } else {
             vec!["schedule", "enable", "--month", "12"]
         };
@@ -102,7 +102,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "check", "--day-of-week", "MWF", "--dry-run"]
+            vec!["schedule", "enable", "--day-of-week", "MWF", "--dry-run"]
         } else {
             vec!["schedule", "enable", "--day-of-week", "MWF"]
         };
@@ -126,7 +126,7 @@ mod tests {
         let args = if cfg!(target_os = "linux") && is_ci() {
             vec![
                 "schedule",
-                "check",
+                "enable",
                 "--minute",
                 "45",
                 "--hour",
@@ -180,7 +180,7 @@ mod tests {
         }
 
         let args = if cfg!(target_os = "linux") && is_ci() {
-            vec!["schedule", "check", "--dry-run"]
+            vec!["schedule", "enable", "--dry-run"]
         } else {
             vec!["schedule", "enable"]
         };
