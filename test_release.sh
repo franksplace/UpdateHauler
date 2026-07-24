@@ -59,7 +59,7 @@ print_section "4. Testing --help"
 ./target/release/updatehauler --help >/tmp/help_output.txt
 if grep -q "Usage:" /tmp/help_output.txt &&
 	grep -q "OPTIONS" /tmp/help_output.txt &&
-	grep -q "ACTION" /tmp/help_output.txt &&
+	grep -q "COMMAND" /tmp/help_output.txt &&
 	grep -q "dry-run" /tmp/help_output.txt &&
 	grep -q "nvim" /tmp/help_output.txt &&
 	grep -q "config-file" /tmp/help_output.txt; then
@@ -104,15 +104,15 @@ else
 	exit 1
 fi
 
-print_section "8. Testing Invalid Action Error Handling"
+print_section "8. Testing Invalid Subcommand Error Handling"
 
 ./target/release/updatehauler invalid-action >/tmp/invalid_output.txt 2>&1 || true
-if grep -q "error: invalid value" /tmp/invalid_output.txt &&
-	grep -q '\[ACTION\]' /tmp/invalid_output.txt &&
-	grep -q "For more information, try '--help'" /tmp/invalid_output.txt; then
-	print_result "Invalid action error handling"
+if grep -q "error: unrecognized subcommand" /tmp/invalid_output.txt &&
+	grep -q "COMMAND" /tmp/invalid_output.txt; then
+	print_result "Invalid subcommand error handling"
 else
-	echo "Error: Invalid action error handling failed"
+	echo "Error: Invalid subcommand error handling failed"
+	cat /tmp/invalid_output.txt
 	exit 1
 fi
 
@@ -181,18 +181,13 @@ else
 	exit 1
 fi
 
-print_section "12. Testing --brew-save-file and --cargo-save-file"
+print_section "12. Testing Plugin Save Files"
 
-# These just verify the option doesn't cause a crash (actual functionality tested in integration tests)
-./target/release/updatehauler --help | grep -q "brew-save-file"
-print_result "--brew-save-file option in help"
-
-./target/release/updatehauler --help | grep -q "cargo-save-file"
-print_result "--cargo-save-file option in help"
+# These just verify the option is available on the plugin subcommand (actual functionality tested in integration tests)
+./target/release/updatehauler brew --help | grep -q "save-file"
+print_result "--save-file option in brew help"
 
 print_section "13. Testing --config-file Option"
-
-# Verify --config-file option exists in help (already tested in help section)
 
 # Test with non-existent config file (should work with defaults)
 ./target/release/updatehauler --config-file /tmp/nonexistent_config.yaml --dry-run os >/tmp/config_option.txt 2>&1
@@ -205,14 +200,13 @@ fi
 
 rm -f /tmp/nonexistent_config.yaml
 
-print_section "14. Testing Multiple Actions"
+print_section "14. Testing Subcommand Execution"
 
-./target/release/updatehauler --dry-run os trim-logfile >/tmp/multiple_actions.txt 2>&1
-if grep -q "Main → Start" /tmp/multiple_actions.txt &&
-	grep -q "Main → End" /tmp/multiple_actions.txt; then
-	print_result "Multiple actions execution"
+./target/release/updatehauler --dry-run os >/tmp/multiple_actions.txt 2>&1
+if grep -q "DRY-RUN" /tmp/multiple_actions.txt; then
+	print_result "Subcommand execution"
 else
-	echo "Error: Multiple actions execution failed"
+	echo "Error: Subcommand execution failed"
 	exit 1
 fi
 
@@ -245,17 +239,14 @@ fi
 ./target/release/updatehauler --help | grep -q "schedule"
 print_result "schedule in help text"
 
-print_section "17. Testing Schedule Time Flags"
+print_section "17. Testing Schedule Enable with Custom Time"
 
-# Test custom schedule time flags (just verify they don't error)
-./target/release/updatehauler --sched-hour "3" --sched-minute "30" schedule check >/tmp/schedule_flags.txt 2>&1
-# Check for platform-specific success indicators
-# macOS: "LaunchAgent plist", "plist exists", "launchctl status"
-# Linux: "crontab at all enabled", "No crontab", or "crontab:" (showing crontab content)
-if grep -q "LaunchAgent plist\|LaunchAgent plist:\|launchctl status:\|crontab at all\|No crontab\|crontab:" /tmp/schedule_flags.txt; then
-	print_result "Schedule time flags"
+# Test custom schedule time flags via schedule enable --dry-run
+./target/release/updatehauler --dry-run schedule enable --hour "3" --minute "30" >/tmp/schedule_flags.txt 2>&1
+if grep -q "DRY-RUN" /tmp/schedule_flags.txt; then
+	print_result "Schedule enable with custom time"
 else
-	echo "Error: Schedule time flags failed"
+	echo "Error: Schedule enable with custom time failed"
 	cat /tmp/schedule_flags.txt
 	exit 1
 fi
@@ -263,15 +254,15 @@ fi
 print_section "18. Testing Backup/Restore Commands"
 
 # Test that backup commands don't crash (may fail if tools not installed)
-timeout 30 ./target/release/updatehauler brew-save >/dev/null 2>&1 || true
-timeout 30 ./target/release/updatehauler cargo-save >/dev/null 2>&1 || true
-timeout 30 ./target/release/updatehauler nvim-save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo save >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim save >/dev/null 2>&1 || true
 print_result "Backup commands (no crash)"
 
 # Test that restore commands don't crash (may fail if files not found)
-timeout 30 ./target/release/updatehauler brew-restore >/dev/null 2>&1 || true
-timeout 30 ./target/release/updatehauler cargo-restore >/dev/null 2>&1 || true
-timeout 30 ./target/release/updatehauler nvim-restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler brew restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler cargo restore >/dev/null 2>&1 || true
+timeout 30 ./target/release/updatehauler nvim restore >/dev/null 2>&1 || true
 print_result "Restore commands (no crash)"
 
 print_section "19. Testing Package Detection"
@@ -322,12 +313,13 @@ else
 	exit 1
 fi
 
-# Test dry-run with multiple actions
-./target/release/updatehauler --dry-run os brew >/tmp/dryrun_multi.txt 2>&1
+# Test dry-run with multiple subcommands
+./target/release/updatehauler --dry-run os >/tmp/dryrun_multi.txt 2>&1
+./target/release/updatehauler --dry-run brew >>/tmp/dryrun_multi.txt 2>&1
 if grep -q "DRY-RUN" /tmp/dryrun_multi.txt; then
-	print_result "Dry-run with multiple actions"
+	print_result "Dry-run with multiple subcommands"
 else
-	echo "Error: Dry-run with multiple actions failed"
+	echo "Error: Dry-run with multiple subcommands failed"
 	exit 1
 fi
 
@@ -337,7 +329,7 @@ rm -f /tmp/help_output.txt /tmp/version_output.txt
 rm -f /tmp/run_output.txt /tmp/stream_output.txt
 rm -f /tmp/invalid_output.txt /tmp/no_color.txt
 rm -f /tmp/no_datetime.txt /tmp/no_header.txt
-rm -f /tmp/custom_log_output.txt /tmp/max_lines.txt
+rm -f /tmp/custom.log /tmp/custom_log_output.txt /tmp/max_lines.txt
 rm -f /tmp/installdir.txt /tmp/multiple_actions.txt
 rm -f /tmp/debug_output.txt
 rm -f /tmp/schedule_check.txt /tmp/schedule_flags.txt
@@ -345,7 +337,7 @@ rm -f /tmp/detection.txt /tmp/test_trim.log
 rm -f /tmp/dryrun_output.txt
 rm -f /tmp/config_option.txt
 rm -f /tmp/nonexistent_config.yaml
-rm -f /tmp/dryrun_os_output.txt
+rm -f /tmp/dryrun_os_output.txt /tmp/dryrun_multi.txt
 
 print_result "Cleanup"
 

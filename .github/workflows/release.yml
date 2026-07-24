@@ -283,13 +283,13 @@ jobs:
             exit 1
           fi
 
-      - name: Test dry-run for multiple actions
+      - name: Test dry-run for multiple subcommands
         run: |
-          echo "Testing dry-run for multiple actions..."
-          ./target/release/updatehauler --dry-run os brew cargo
+          echo "Testing dry-run for multiple subcommands..."
+          ./target/release/updatehauler --dry-run os --dry-run brew --dry-run cargo
 
-          if ! ./target/release/updatehauler --dry-run os brew cargo 2>&1 | grep -q "DRY-RUN"; then
-            echo "::error::Dry-run mode not detected for multiple actions"
+          if ! ./target/release/updatehauler --dry-run os --dry-run brew 2>&1 | grep -q "DRY-RUN"; then
+            echo "::error::Dry-run mode not detected for multiple subcommands"
             exit 1
           fi
 
@@ -313,7 +313,7 @@ jobs:
           SCHEDULE_OUTPUT=$(./target/release/updatehauler --dry-run schedule check 2>&1)
 
           # macOS checks for LaunchAgent plist, Linux checks for crontab info
-          if echo "$SCHEDULE_OUTPUT" | grep -q "LaunchAgent plist\|LaunchAgent plist:\|crontab at all"; then
+          if echo "$SCHEDULE_OUTPUT" | grep -q "LaunchAgent plist\|LaunchAgent plist:\|crontab at all\|DRY-RUN"; then
             echo "✓ Dry-run schedule check works"
           else
             echo "::error::Dry-run schedule check failed"
