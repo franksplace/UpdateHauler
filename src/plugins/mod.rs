@@ -314,7 +314,9 @@ pub(crate) fn run_with_sudo_prefix(
 
     let mut sudo_args: Vec<&str> = vec![command];
     sudo_args.extend(args);
-    run_cmd_prefix(config, logger, show_error, SUDO_PATH, &sudo_args, log_prefix)
+    run_cmd_prefix(
+        config, logger, show_error, SUDO_PATH, &sudo_args, log_prefix,
+    )
 }
 
 pub(crate) fn run_cmd(

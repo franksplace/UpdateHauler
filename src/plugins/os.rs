@@ -97,7 +97,14 @@ impl Plugin for OsPlugin {
                         let args: Vec<&str> = args.to_vec();
                         super::run_cmd_prefix(config, logger, true, program, &args, Some("os"))?;
                     } else {
-                        super::run_with_sudo_prefix(config, logger, true, program, args, Some("os"))?;
+                        super::run_with_sudo_prefix(
+                            config,
+                            logger,
+                            true,
+                            program,
+                            args,
+                            Some("os"),
+                        )?;
                     }
                 }
             } else {
