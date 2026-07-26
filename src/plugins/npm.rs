@@ -49,6 +49,7 @@ impl Plugin for NpmPlugin {
         _insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()> {
+        logger.log("npm → Updating global npm packages");
         super::run_cmd(config, logger, true, "npm", &["update", "-g"])?;
         Ok(())
     }
@@ -60,7 +61,10 @@ impl Plugin for NpmPlugin {
             std::fs::create_dir_all(parent)?;
         }
 
-        logger.log(&format!("Saving npm global packages to {}", npm_file));
+        logger.log(&format!(
+            "npm - save → Saving npm global packages to {}",
+            npm_file
+        ));
 
         let output = cmd("npm", &["list", "-g", "--depth=0", "--json"])
             .stdout_capture()
@@ -71,10 +75,15 @@ impl Plugin for NpmPlugin {
             std::fs::write(&npm_file, &output.stdout)?;
         }
         if !output.stderr.is_empty() {
-            logger.log(&String::from_utf8_lossy(&output.stderr));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if !line.contains("Using Python") && !line.contains("environment at:") {
+                    logger.log(line);
+                }
+            }
         }
 
-        logger.log("Success savefile written");
+        logger.log("npm - save → Success savefile written");
 
         Ok(())
     }
@@ -89,13 +98,16 @@ impl Plugin for NpmPlugin {
 
         if !config.npm_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} npm's backup file is not found",
+                "npm - restore → missing dependency — {} npm's backup file is not found",
                 npm_file
             ));
             return Ok(());
         }
 
-        logger.log(&format!("Restoring npm global packages from {}", npm_file));
+        logger.log(&format!(
+            "npm - restore → Restoring npm global packages from {}",
+            npm_file
+        ));
 
         let content = std::fs::read_to_string(&npm_file)?;
         let json: serde_json::Value = serde_json::from_str(&content)?;
@@ -107,10 +119,10 @@ impl Plugin for NpmPlugin {
                 args.extend(packages);
                 super::run_cmd(config, logger, true, "npm", &args)?;
             } else {
-                logger.log("No packages found in save file");
+                logger.log("npm - restore → No packages found in save file");
             }
         } else {
-            logger.log("No dependencies found in save file");
+            logger.log("npm - restore → No dependencies found in save file");
         }
 
         Ok(())

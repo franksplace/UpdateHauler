@@ -86,14 +86,17 @@ impl Plugin for BrewPlugin {
     ) -> Result<bool> {
         match action_name {
             "brew-list" => {
+                logger.log("brew - list → Listing installed brew formulas");
                 brew_run_cmd(config, logger, true, "brew", &["list"])?;
                 Ok(true)
             }
             "brew-outdated" => {
+                logger.log("brew - outdated → Showing outdated brew formulas");
                 brew_run_cmd(config, logger, true, "brew", &["outdated"])?;
                 Ok(true)
             }
             "brew-upgrade-pinned" => {
+                logger.log("brew - upgrade-pinned → Upgrading pinned brew formulas");
                 brew_run_cmd(config, logger, true, "brew", &["upgrade", "--pinned"])?;
                 Ok(true)
             }
@@ -125,10 +128,14 @@ impl Plugin for BrewPlugin {
             return Ok(());
         }
 
+        logger.log("brew - update → Updating brew formulas");
         brew_run_cmd(config, logger, true, "brew", &["update"])?;
+        logger.log("brew - upgrade → Upgrading brew formulas");
         brew_run_cmd(config, logger, true, "brew", &["upgrade", "--yes"])?;
+        logger.log("brew - cleanup → Cleaning up brew");
         brew_run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
         let _ = brew_run_cmd(config, logger, false, "brew", &["doctor", "-q"]);
+        logger.log("brew - upgrade cask → Upgrading casks");
         brew_run_cmd(
             config,
             logger,
@@ -142,6 +149,7 @@ impl Plugin for BrewPlugin {
             .run()
             .is_ok()
         {
+            logger.log("brew - cu → Upgrading casks via brew-cu");
             brew_run_cmd(
                 config,
                 logger,
@@ -150,6 +158,7 @@ impl Plugin for BrewPlugin {
                 &["cu", "-a", "-f", "--cleanup", "-y"],
             )?;
         }
+        logger.log("brew - cleanup → Final cleanup");
         brew_run_cmd(config, logger, true, "brew", &["cleanup", "-q"])?;
         let _ = brew_run_cmd(config, logger, false, "brew", &["doctor", "--verbose"]);
 
@@ -167,7 +176,10 @@ impl Plugin for BrewPlugin {
             std::fs::create_dir_all(parent)?;
         }
 
-        logger.log(&format!("Generating brew's {} save file", brew_file));
+        logger.log(&format!(
+            "brew - save → Generating brew's {} save file",
+            brew_file
+        ));
 
         brew_run_cmd(
             config,
@@ -177,7 +189,7 @@ impl Plugin for BrewPlugin {
             &["bundle", "dump", "--force", "--file", &brew_file],
         )?;
 
-        logger.log("Success savefile written");
+        logger.log("brew - save → Success savefile written");
 
         Ok(())
     }
@@ -196,7 +208,7 @@ impl Plugin for BrewPlugin {
 
         if !config.brew_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} brew's backup file is not found",
+                "brew - restore → missing dependency — {} brew's backup file is not found",
                 brew_file
             ));
             return Ok(());

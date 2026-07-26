@@ -37,31 +37,36 @@ impl Plugin for OsPlugin {
         logger: &mut Logger,
     ) -> Result<()> {
         if insights.is_darwin {
-            let softwareupdate_result = super::run_with_sudo(
+            logger.log("os - softwareupdate → Running software update");
+            let softwareupdate_result = super::run_with_sudo_prefix(
                 config,
                 logger,
                 false,
                 "/usr/sbin/softwareupdate",
                 &["-a", "-i", "--verbose"],
+                Some("os"),
             );
 
             if softwareupdate_result.is_err() {
-                super::run_cmd(
+                super::run_cmd_prefix(
                     config,
                     logger,
                     true,
                     "/usr/sbin/softwareupdate",
                     &["-a", "-i", "--verbose"],
+                    Some("os"),
                 )?;
             }
 
-            super::run_cmd(config, logger, true, "mas", &["update"])?;
+            logger.log("os - mas → Updating Mac App Store apps");
+            super::run_cmd_prefix(config, logger, true, "mas", &["update"], Some("os"))?;
 
             return Ok(());
         }
 
         if insights.is_linux {
             if let Some(ref pkg_mgr) = insights.pkg_mgr {
+                logger.log(&format!("os - {} → Running system updates", pkg_mgr));
                 let commands = match pkg_mgr.as_str() {
                     "dnf" => vec![
                         vec!["dnf", "-y", "update"],
@@ -81,7 +86,7 @@ impl Plugin for OsPlugin {
                     "nix-env" => vec![vec!["nix-channel", "--update"], vec!["nix-env", "-u", "*"]],
                     "arch" => vec![vec!["pacman", "-Syu", "--noconfirm"]],
                     _ => {
-                        logger.error("OS not supported for updates");
+                        logger.error("os - OS not supported for updates");
                         return Ok(());
                     }
                 };
@@ -90,13 +95,13 @@ impl Plugin for OsPlugin {
                     let (program, args) = cmd_args.split_first().unwrap();
                     if insights.is_root {
                         let args: Vec<&str> = args.to_vec();
-                        super::run_cmd(config, logger, true, program, &args)?;
+                        super::run_cmd_prefix(config, logger, true, program, &args, Some("os"))?;
                     } else {
-                        super::run_with_sudo(config, logger, true, program, args)?;
+                        super::run_with_sudo_prefix(config, logger, true, program, args, Some("os"))?;
                     }
                 }
             } else {
-                logger.error("OS not supported for updates");
+                logger.error("os - No package manager found, OS not supported for updates");
             }
         }
 

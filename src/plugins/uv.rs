@@ -84,6 +84,7 @@ impl Plugin for UvPlugin {
         _insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()> {
+        logger.log("uv → Upgrading all uv tools");
         super::run_cmd(config, logger, true, "uv", &["tool", "upgrade", "--all"])?;
         Ok(())
     }
@@ -95,7 +96,7 @@ impl Plugin for UvPlugin {
             std::fs::create_dir_all(parent)?;
         }
 
-        logger.log(&format!("Saving uv tools list to {}", uv_file));
+        logger.log(&format!("uv - save → Saving uv tools list to {}", uv_file));
 
         if config.dry_run {
             if config.show_header {
@@ -117,12 +118,17 @@ impl Plugin for UvPlugin {
             std::fs::write(&uv_file, &output.stdout)?;
         }
         if !output.stderr.is_empty() {
-            logger.log(&String::from_utf8_lossy(&output.stderr));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if !line.contains("Using Python") && !line.contains("environment at:") {
+                    logger.log(line);
+                }
+            }
         }
 
         self.update(config, insights, logger).await?;
 
-        logger.log("Success savefile written");
+        logger.log("uv - save → Success savefile written");
 
         Ok(())
     }
@@ -137,13 +143,16 @@ impl Plugin for UvPlugin {
 
         if !config.uv_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} uv's backup file is not found",
+                "uv - restore → missing dependency — {} uv's backup file is not found",
                 uv_file
             ));
             return Ok(());
         }
 
-        logger.log(&format!("Restoring uv tools from {}", uv_file));
+        logger.log(&format!(
+            "uv - restore → Restoring uv tools from {}",
+            uv_file
+        ));
 
         let content = std::fs::read_to_string(&uv_file)?;
         for line in content.lines() {

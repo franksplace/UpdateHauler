@@ -90,10 +90,11 @@ impl Plugin for CargoPlugin {
 
         let check = cmd("cargo", &["install-update", "--version"]).run();
         if check.is_err() {
-            logger.error("cargo-install-update not found — install it with: cargo install cargo-install-update");
+            logger.error("cargo - cargo-install-update not found — install it with: cargo install cargo-install-update");
             return Ok(());
         }
 
+        logger.log("cargo → Upgrading cargo packages");
         super::run_cmd(config, logger, true, "cargo", &["install-update", "-a"])?;
 
         Ok(())
@@ -112,11 +113,16 @@ impl Plugin for CargoPlugin {
 
         let check = cmd("cargo", &["backup", "--version"]).run();
         if check.is_err() {
-            logger.error("cargo-backup not found — install it with: cargo install cargo-backup");
+            logger.error(
+                "cargo - cargo-backup not found — install it with: cargo install cargo-backup",
+            );
             return Ok(());
         }
 
-        logger.log(&format!("Generating cargo's {} save file", cargo_file));
+        logger.log(&format!(
+            "cargo - save → Generating cargo's {} save file",
+            cargo_file
+        ));
 
         super::run_cmd(
             config,
@@ -126,7 +132,7 @@ impl Plugin for CargoPlugin {
             &["backup", "-o", &cargo_file],
         )?;
 
-        logger.log("Success savefile written");
+        logger.log("cargo - save → Success savefile written");
 
         Ok(())
     }
@@ -145,7 +151,7 @@ impl Plugin for CargoPlugin {
 
         if !config.cargo_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} cargo's backup json file is not found",
+                "cargo - restore → missing dependency — {} cargo's backup json file is not found",
                 cargo_file
             ));
             return Ok(());
@@ -153,7 +159,7 @@ impl Plugin for CargoPlugin {
 
         let check = cmd("cargo", &["restore", "--version"]).run();
         if check.is_err() {
-            logger.error("cargo-restore not found — install it with: cargo install cargo-restore");
+            logger.error("cargo - restore → cargo-restore not found — install it with: cargo install cargo-restore");
             return Ok(());
         }
 

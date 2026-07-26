@@ -50,9 +50,9 @@ impl Plugin for GoPlugin {
         logger: &mut Logger,
     ) -> Result<()> {
         super::run_cmd(config, logger, true, "go", &["version"])?;
-        logger.log("Go updates — upgrade Go toolchain via your package manager or download from https://go.dev/dl");
+        logger.log("go → Go updates — upgrade Go toolchain via your package manager or download from https://go.dev/dl");
         logger.log(
-            "Go binaries installed via 'go install' — run 'go install <path>@latest' for each",
+            "go → Go binaries installed via 'go install' — run 'go install <path>@latest' for each",
         );
         Ok(())
     }
@@ -62,7 +62,10 @@ impl Plugin for GoPlugin {
         if let Some(parent) = config.go_file.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        logger.log(&format!("Saving Go binaries list to {}", go_file));
+        logger.log(&format!(
+            "go - save → Saving Go binaries list to {}",
+            go_file
+        ));
 
         let gopath_output = cmd("go", &["env", "GOPATH"]).stdout_capture().run();
         match gopath_output {
@@ -87,7 +90,7 @@ impl Plugin for GoPlugin {
             }
         }
 
-        logger.log("Success savefile written");
+        logger.log("go - save → Success savefile written");
         Ok(())
     }
 
@@ -100,13 +103,16 @@ impl Plugin for GoPlugin {
         let go_file = config.go_file.to_string_lossy().to_string();
         if !config.go_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} go's backup file is not found",
+                "go - restore → missing dependency — {} go's backup file is not found",
                 go_file
             ));
             return Ok(());
         }
-        logger.log(&format!("Restoring Go binaries from {}", go_file));
-        logger.log("Go binaries must be reinstalled manually — run: go install <path>@latest");
+        logger.log(&format!(
+            "go - restore → Restoring Go binaries from {}",
+            go_file
+        ));
+        logger.log("go - restore → Go binaries must be reinstalled manually — run: go install <path>@latest");
         Ok(())
     }
 }

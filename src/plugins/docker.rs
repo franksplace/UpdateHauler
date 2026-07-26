@@ -18,7 +18,7 @@ impl DockerPlugin {
         match result {
             Ok(output) => output.status.success(),
             Err(_) => {
-                logger.log("Docker daemon is not running, skipping prune");
+                logger.log("docker → Docker daemon is not running, skipping prune");
                 false
             }
         }
@@ -56,6 +56,7 @@ impl Plugin for DockerPlugin {
         if !Self::daemon_running(logger) {
             return Ok(());
         }
+        logger.log("docker → Pruning unused Docker data");
         super::run_cmd(
             config,
             logger,

@@ -1092,7 +1092,11 @@ fn main() -> Result<ExitCode> {
     }
 
     // -- Execute plugin actions --
-    logger.log(&format!("{} Main → Start", config.app_name));
+    logger.log(&format!(
+        "{} v{} Main → Start",
+        config.app_name,
+        env!("CARGO_PKG_VERSION")
+    ));
 
     let mut results: Vec<(&str, bool)> = Vec::new();
 
@@ -1117,7 +1121,11 @@ fn main() -> Result<ExitCode> {
         }
     }
 
-    logger.log(&format!("{} Main → End", config.app_name));
+    logger.log(&format!(
+        "{} v{} Main → End",
+        config.app_name,
+        env!("CARGO_PKG_VERSION")
+    ));
 
     if config.show_header {
         let success_count = results.iter().filter(|(_, s)| *s).count();

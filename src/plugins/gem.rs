@@ -48,8 +48,11 @@ impl Plugin for GemPlugin {
         _insights: &Insights,
         logger: &mut Logger,
     ) -> Result<()> {
+        logger.log("gem → Updating rubygems system");
         super::run_cmd(config, logger, true, "gem", &["update", "--system"])?;
+        logger.log("gem → Updating gems");
         super::run_cmd(config, logger, true, "gem", &["update"])?;
+        logger.log("gem → Cleaning up gems");
         super::run_cmd(config, logger, true, "gem", &["cleanup"])?;
         Ok(())
     }
@@ -59,9 +62,12 @@ impl Plugin for GemPlugin {
         if let Some(parent) = config.gem_file.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        logger.log(&format!("Saving Ruby gems list to {}", gem_file));
+        logger.log(&format!(
+            "gem - save → Saving Ruby gems list to {}",
+            gem_file
+        ));
         super::run_cmd(config, logger, true, "gem", &["list", "--local"])?;
-        logger.log("Success savefile written");
+        logger.log("gem - save → Success savefile written");
         Ok(())
     }
 
@@ -74,13 +80,18 @@ impl Plugin for GemPlugin {
         let gem_file = config.gem_file.to_string_lossy().to_string();
         if !config.gem_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} gem's backup file is not found",
+                "gem - restore → missing dependency — {} gem's backup file is not found",
                 gem_file
             ));
             return Ok(());
         }
-        logger.log(&format!("Restoring Ruby gems from {}", gem_file));
-        logger.log("Ruby gems must be reinstalled manually — run: gem install <gemname>");
+        logger.log(&format!(
+            "gem - restore → Restoring Ruby gems from {}",
+            gem_file
+        ));
+        logger.log(
+            "gem - restore → Ruby gems must be reinstalled manually — run: gem install <gemname>",
+        );
         Ok(())
     }
 }

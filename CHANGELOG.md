@@ -5,6 +5,16 @@ All notable changes to UpdateHauler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+### Changed
+- **Version in startup log**: Main start/end log now includes the version (e.g. `updatehauler v0.4.1 Main → Start`).
+- **Plugin log prefixes**: All plugins now use structured prefixed log messages (e.g. `brew - update →`, `npm - save →`, `nvim - lazy →`, `os - softwareupdate →`) so it's clear which plugin and action each log line belongs to.
+- **OS plugin command prefixes**: `run_cmd`/`run_with_sudo` now support an optional `log_prefix` parameter, used by the `os` plugin so command execution lines show `os -` prefix (e.g. `os - mas update → Start`).
+
+### Fixed
+- **Suppressed Python environment noise**: `pip list --outdated` was leaking `Using Python ... environment at:` stderr messages to the terminal. Added `.stderr_capture()` and filtering for `Using Python`/`environment at:` lines in `pip`, `npm`, and `uv` plugins.
+
 ## [0.4.0]
 
 ### Changed

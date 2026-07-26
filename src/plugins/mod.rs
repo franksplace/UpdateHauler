@@ -295,15 +295,26 @@ pub(crate) fn run_with_sudo(
     command: &str,
     args: &[&str],
 ) -> Result<()> {
+    run_with_sudo_prefix(config, logger, show_error, command, args, None)
+}
+
+pub(crate) fn run_with_sudo_prefix(
+    config: &Config,
+    logger: &mut Logger,
+    show_error: bool,
+    command: &str,
+    args: &[&str],
+    log_prefix: Option<&str>,
+) -> Result<()> {
     if config.no_sudo || std::env::var("UPDATEHAULER_NO_SUDO").is_ok() {
-        return run_cmd(config, logger, show_error, command, args);
+        return run_cmd_prefix(config, logger, show_error, command, args, log_prefix);
     }
 
     validate_sudo_path()?;
 
     let mut sudo_args: Vec<&str> = vec![command];
     sudo_args.extend(args);
-    run_cmd(config, logger, show_error, SUDO_PATH, &sudo_args)
+    run_cmd_prefix(config, logger, show_error, SUDO_PATH, &sudo_args, log_prefix)
 }
 
 pub(crate) fn run_cmd(
@@ -313,7 +324,21 @@ pub(crate) fn run_cmd(
     command: &str,
     args: &[&str],
 ) -> Result<()> {
-    let cmd_str = format!("{} {}", command, args.join(" "));
+    run_cmd_prefix(config, logger, show_error, command, args, None)
+}
+
+pub(crate) fn run_cmd_prefix(
+    config: &Config,
+    logger: &mut Logger,
+    show_error: bool,
+    command: &str,
+    args: &[&str],
+    log_prefix: Option<&str>,
+) -> Result<()> {
+    let cmd_str = match log_prefix {
+        Some(prefix) => format!("{} - {} {}", prefix, command, args.join(" ")),
+        None => format!("{} {}", command, args.join(" ")),
+    };
 
     let is_sudo = std::path::Path::new(command)
         .file_name()
@@ -322,6 +347,10 @@ pub(crate) fn run_cmd(
         args[3]
     } else {
         command
+    };
+    let short_cmd = match log_prefix {
+        Some(prefix) => format!("{} - {}", prefix, short_cmd),
+        None => short_cmd.to_string(),
     };
 
     if config.dry_run {

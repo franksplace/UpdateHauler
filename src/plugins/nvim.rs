@@ -201,14 +201,14 @@ impl Plugin for NvimPlugin {
     ) -> Result<bool> {
         match action_name {
             "nvim-list" => {
-                logger
-                    .log("Installed nvim plugins are listed in your plugin manager configuration");
+                logger.log("nvim - list → Installed nvim plugins are listed in your plugin manager configuration");
                 Ok(true)
             }
             "nvim-clean" => {
                 let plugin_manager = Self::detect_plugin_manager();
                 match plugin_manager.as_deref() {
                     Some("lazy.nvim") => {
+                        logger.log("nvim - lazy → Cleaning unused lazy.nvim plugins");
                         super::run_cmd(
                             config,
                             logger,
@@ -218,6 +218,7 @@ impl Plugin for NvimPlugin {
                         )?;
                     }
                     Some("packer.nvim") => {
+                        logger.log("nvim - packer → Cleaning unused packer.nvim plugins");
                         super::run_cmd(
                             config,
                             logger,
@@ -227,6 +228,7 @@ impl Plugin for NvimPlugin {
                         )?;
                     }
                     Some("vim-plug") => {
+                        logger.log("nvim - vim-plug → Cleaning unused vim-plug plugins");
                         super::run_cmd(
                             config,
                             logger,
@@ -236,12 +238,13 @@ impl Plugin for NvimPlugin {
                         )?;
                     }
                     _ => {
-                        logger.log("No supported nvim plugin manager detected");
+                        logger.log("nvim → No supported nvim plugin manager detected");
                     }
                 }
                 Ok(true)
             }
             "nvim-health" => {
+                logger.log("nvim - health → Running nvim health check");
                 let lua_script = r#"
 local results = {}
 local h = vim.health
@@ -322,14 +325,17 @@ end
 
         let plugin_manager_found = match plugin_manager.as_deref() {
             Some("lazy.nvim") => {
+                logger.log("nvim - lazy → Syncing lazy.nvim plugins");
                 Self::update_lazy_nvim(config, logger)?;
                 true
             }
             Some("packer.nvim") => {
+                logger.log("nvim - packer → Syncing packer.nvim plugins");
                 Self::update_packer_nvim(config, logger)?;
                 true
             }
             Some("vim-plug") => {
+                logger.log("nvim - vim-plug → Updating vim-plug plugins");
                 Self::update_vim_plug(config, logger)?;
                 true
             }
@@ -337,12 +343,12 @@ end
         };
 
         if !plugin_manager_found && !Self::detect_mason() {
-            logger.log("No supported nvim plugin manager or Mason detected (lazy.nvim, packer.nvim, vim-plug)");
+            logger.log("nvim → No supported nvim plugin manager or Mason detected (lazy.nvim, packer.nvim, vim-plug)");
             return Ok(());
         }
 
         if Self::detect_mason() {
-            logger.log("Updating Mason tools...");
+            logger.log("nvim - mason → Updating Mason tools");
             Self::update_mason(config, logger)?;
         }
 
@@ -353,11 +359,24 @@ end
         let plugin_manager = Self::detect_plugin_manager();
 
         match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::save_lazy_nvim(config, logger)?,
-            Some("packer.nvim") => Self::save_packer_nvim(config, logger)?,
-            Some("vim-plug") => Self::save_vim_plug(config, logger)?,
+            Some("lazy.nvim") => {
+                logger.log(
+                    "nvim - lazy → lazy.nvim plugins are defined in your lazy.nvim configuration",
+                );
+                Self::save_lazy_nvim(config, logger)?
+            }
+            Some("packer.nvim") => {
+                logger.log("nvim - packer → packer.nvim plugins are defined in your packer.nvim configuration");
+                Self::save_packer_nvim(config, logger)?
+            }
+            Some("vim-plug") => {
+                logger.log(
+                    "nvim - vim-plug → vim-plug plugins are defined in your vim-plug configuration",
+                );
+                Self::save_vim_plug(config, logger)?
+            }
             _ => {
-                logger.log("No supported nvim plugin manager detected");
+                logger.log("nvim → No supported nvim plugin manager detected");
             }
         }
 
@@ -373,11 +392,20 @@ end
         let plugin_manager = Self::detect_plugin_manager();
 
         match plugin_manager.as_deref() {
-            Some("lazy.nvim") => Self::restore_lazy_nvim(config, logger)?,
-            Some("packer.nvim") => Self::restore_packer_nvim(config, logger)?,
-            Some("vim-plug") => Self::restore_vim_plug(config, logger)?,
+            Some("lazy.nvim") => {
+                logger.log("nvim - lazy → Restoring lazy.nvim plugins");
+                Self::restore_lazy_nvim(config, logger)?
+            }
+            Some("packer.nvim") => {
+                logger.log("nvim - packer → Restoring packer.nvim plugins");
+                Self::restore_packer_nvim(config, logger)?
+            }
+            Some("vim-plug") => {
+                logger.log("nvim - vim-plug → Restoring vim-plug plugins");
+                Self::restore_vim_plug(config, logger)?
+            }
             _ => {
-                logger.log("No supported nvim plugin manager detected");
+                logger.log("nvim → No supported nvim plugin manager detected");
             }
         }
 

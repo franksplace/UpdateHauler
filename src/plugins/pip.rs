@@ -60,7 +60,19 @@ impl Plugin for PipPlugin {
             ("pip", &["list", "--outdated", "--format=json"])
         };
 
-        let output = cmd(prog, list_args).stdout_capture().run()?;
+        let output = cmd(prog, list_args)
+            .stdout_capture()
+            .stderr_capture()
+            .run()?;
+
+        if !output.stderr.is_empty() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if !line.contains("Using Python") && !line.contains("environment at:") {
+                    logger.log(line);
+                }
+            }
+        }
 
         if output.stdout.is_empty() {
             return Ok(());
@@ -69,7 +81,10 @@ impl Plugin for PipPlugin {
         let packages: Vec<PipOutdatedPackage> = match serde_json::from_slice(&output.stdout) {
             Ok(pkgs) => pkgs,
             Err(e) => {
-                logger.error(&format!("Failed to parse outdated package list: {}", e));
+                logger.error(&format!(
+                    "pip - Failed to parse outdated package list: {}",
+                    e
+                ));
                 return Ok(());
             }
         };
@@ -106,7 +121,7 @@ impl Plugin for PipPlugin {
             std::fs::create_dir_all(parent)?;
         }
 
-        logger.log(&format!("Saving pip packages to {}", pip_file));
+        logger.log(&format!("pip - save → Saving pip packages to {}", pip_file));
 
         let (prog, args) = if insights.has_uv {
             ("uv", &["pip", "freeze"] as &[&str])
@@ -120,10 +135,15 @@ impl Plugin for PipPlugin {
             std::fs::write(&pip_file, &output.stdout)?;
         }
         if !output.stderr.is_empty() {
-            logger.log(&String::from_utf8_lossy(&output.stderr));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if !line.contains("Using Python") && !line.contains("environment at:") {
+                    logger.log(line);
+                }
+            }
         }
 
-        logger.log("Success savefile written");
+        logger.log("pip - save → Success savefile written");
 
         Ok(())
     }
@@ -138,13 +158,16 @@ impl Plugin for PipPlugin {
 
         if !config.pip_file.exists() {
             logger.error(&format!(
-                "missing dependency — {} pip's requirements file is not found",
+                "pip - restore → missing dependency — {} pip's requirements file is not found",
                 pip_file
             ));
             return Ok(());
         }
 
-        logger.log(&format!("Restoring pip packages from {}", pip_file));
+        logger.log(&format!(
+            "pip - restore → Restoring pip packages from {}",
+            pip_file
+        ));
         if insights.has_uv {
             super::run_cmd(
                 config,
