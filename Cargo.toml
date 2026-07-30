@@ -1,8 +1,8 @@
 [package]
 name = "updatehauler"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2024"
-description = "System package update manager for macOS and Linux"
+description = "Command-line caretaker for your development stack — updates OS packages (macOS/Linux), Homebrew, Cargo, npm, pip, uv, Neovim plugins, and more in one go"
 authors = ["FrankStutz"]
 license = "Apache-2.0"
 repository = "https://github.com/franksplace/UpdateHauler"

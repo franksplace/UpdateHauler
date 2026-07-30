@@ -459,7 +459,18 @@ fn install_completions(config: &Config, shells: &[&str]) -> Result<()> {
     name = "updatehauler",
     version = env!("CARGO_PKG_VERSION"),
     about = "System package update manager for macOS and Linux",
-    long_about = None,
+    long_about = "UpdateHauler is a command-line caretaker for your entire development stack that rounds up, updates, and tidies everything in one go: operating system packages (macOS, Linux), Homebrew formulae and casks, Cargo crates, npm/pip/uv packages, Neovim plugins, and any other updatable tools you wire in.
+
+Key capabilities:
+  • Plugin-based architecture — modular, extensible system for 17+ package managers
+  • Automated updates — update OS, Homebrew, Cargo, npm, pip, Neovim plugins, and more in a single command
+  • YAML configuration — optional config file for fine-grained control
+  • Backup & restore — save and restore package configurations for brew, cargo, npm, pip, uv
+  • Scheduling — automated updates via cron (Linux) or launchd (macOS)
+  • Dry-run mode — preview changes without executing (perfect for CI/CD and testing)
+  • Comprehensive logging — with optional logfile rotation
+  • Color output — readable color-coded terminal output
+  • Self-installation — easy installation and updates of the application itself",
     after_help = get_help_text()
 )]
 struct Args {

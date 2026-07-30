@@ -5,6 +5,16 @@ All notable changes to UpdateHauler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3]
+
+### Changed
+- **GitHub Actions workflows**: Added `paths-ignore` for markdown files (`**.md`, `**.markdown`) to all workflows (pr.yml, pr-validation.yml, coverage.yml, release.yml) so docs-only changes don't trigger CI builds.
+- **README badges**: Updated CI Status, Coverage, and Dependencies badges to use GitHub Actions workflow badge format instead of deprecated endpoints.
+- **Help text**: Expanded `--help` description with comprehensive app overview, key capabilities, and improved examples.
+
+### Fixed
+- **Dependabot badge**: Replaced broken Dependabot badge with shields.io "dependencies up to date" badge linking to GitHub dependency graph.
+
 ## [0.4.2]
 
 ### Fixed
