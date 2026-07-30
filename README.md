@@ -1,9 +1,9 @@
 # UpdateHauler
 
-[![CI Status](https://github.com/franksplace/updatehauler/workflows/PR%20Check/badge.svg)](https://github.com/franksplace/updatehauler/actions)
-[![Coverage](https://codecov.io/gh/franksplace/updatehauler/branch/main/graph/badge.svg)](https://codecov.io/gh/franksplace/updatehauler)
+[![CI Status](https://github.com/franksplace/updatehauler/actions/workflows/pr.yml/badge.svg)](https://github.com/franksplace/updatehauler/actions/workflows/pr.yml)
+[![Coverage](https://github.com/franksplace/updatehauler/actions/workflows/coverage.yml/badge.svg)](https://github.com/franksplace/updatehauler/actions/workflows/coverage.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Dependabot](https://badges.dependabot.com/badges/status?host=github.com&repo=franksplace/updatehauler)](https://github.com/franksplace/updatehauler)
+[![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen.svg)](https://github.com/franksplace/updatehauler/network/dependencies)
 
 UpdateHauler is a command-line caretaker for your entire development stack that rounds up, updates, and tidies everything in one go: operating system packages (macOS, Linux), Homebrew formulae and casks, Cargo crates, and any other updatable tools you wire in.
 
