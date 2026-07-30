@@ -49,7 +49,7 @@ mod tests {
 
         let stdout = String::from_utf8_lossy(&output.stdout);
 
-        assert!(stdout.contains("System package update manager"));
+        assert!(stdout.contains("command-line caretaker"));
     }
 
     #[test]
