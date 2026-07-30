@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - develop
+    paths-ignore:
+      - '**.md'
+      - '**.markdown'
 
 env:
   CARGO_TERM_COLOR: always
