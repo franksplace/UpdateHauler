@@ -28,7 +28,7 @@ serde-saphyr = "2.0.0"
 which = "8.0"
 duct = "1.1"
 strsim = "0.11"
-nix = { version = "0.31", features = ["user"] }
+nix = { version = "0.32", features = ["user"] }
 async-trait = "0.1"
 tokio = { version = "1.40", features = ["full"] }
 atty = "0.2"
